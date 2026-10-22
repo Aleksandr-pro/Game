@@ -326,9 +326,14 @@ export class Renderer {
       h: cam.viewH,
     };
 
-    // Фон арены
+    // Фон арены (рисуем только видимую часть — так быстрее)
     const bg = this.buildBackground(game.map, game.mapVersion);
-    ctx.drawImage(bg, 0, 0);
+    const sx = Math.max(0, Math.floor(view.x - 4));
+    const sy = Math.max(0, Math.floor(view.y - 4));
+    const sw = Math.min(bg.width - sx, Math.ceil(view.w + 8));
+    const sh = Math.min(bg.height - sy, Math.ceil(view.h + 8));
+    if (sw > 0 && sh > 0) ctx.drawImage(bg, sx, sy, sw, sh, sx, sy, sw, sh);
+    else ctx.drawImage(bg, 0, 0);
 
     // Ворота
     if (game.mode === 'brawlball') this.drawGoals(ctx, game);

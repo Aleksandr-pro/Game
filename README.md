@@ -6,6 +6,11 @@
 
 ![Арена](docs/screenshots/arena.jpg)
 
+<p align="center">
+  <img src="docs/screenshots/brawlball.jpg" width="49%" alt="Бравл-бол" />
+  <img src="docs/screenshots/bounty.jpg" width="49%" alt="Режим Награда" />
+</p>
+
 ## Что внутри
 
 **9 бравлеров**, у каждого свой характер, оружие, суперспособность и гаджет:
@@ -74,6 +79,10 @@ npx serve .
 | Гаджет | `Q` | кнопка слева от супера |
 | Табло матча | `Tab` | — |
 | Пауза | `Esc` / `P` | кнопка ❚❚ |
+
+## Скриншоты и портреты
+
+<p align="center"><img src="docs/screenshots/portraits.png" width="70%" alt="Все бравлеры" /></p>
 
 ## Структура
 

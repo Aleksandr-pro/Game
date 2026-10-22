@@ -110,6 +110,7 @@ export class Input {
 
     this._onPointerUp = (e) => {
       const p = this._local(e);
+      const wasDown = this.pointer.down;
       this.pointer.down = false;
       if (e.pointerType === 'touch') {
         if (this.moveStick && this.moveStick.id === e.pointerId) {
@@ -128,9 +129,8 @@ export class Input {
           this.aiming = false;
           this.aimSource = 'none';
         }
-      } else if (this.pointer.down) {
+      } else if (wasDown) {
         const held = performance.now() - this.mouseDownAt;
-        this.pointer.down = false;
         this.aiming = false;
         this.aimSource = 'none';
         // Короткий клик или отпускание после прицеливания — выстрел
