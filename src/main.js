@@ -130,7 +130,12 @@ function startMatch() {
   });
   game.paused = false;
   ui.startGameUI(game, input);
-  ui.toast(`Карта: ${game.map.name}`);
+  ui.toast(`Карта: ${game.map.name} · ${MODES[save.selectedMode].name}`);
+  if ((save.matches || 0) === 0) {
+    setTimeout(() => {
+      ui.toast('WASD — движение · ЛКМ — выстрел · ПКМ/Space — супер · Q — гаджет');
+    }, 2200);
+  }
 }
 
 function handleMatchEnd(result) {
