@@ -1,0 +1,17 @@
+{
+  "name": "brawl-arena",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Brawl Arena — динамичный аркадный шутер 3v3 в браузере",
+  "keywords": ["game", "canvas", "brawler", "arena", "multiplayer-like"],
+  "license": "MIT",
+  "scripts": {
+    "start": "python3 -m http.server 8080 --bind 0.0.0.0",
+    "check": "node scripts/check.js",
+    "sim": "node scripts/sim.js",
+    "test:ui": "node scripts/ui-test.js",
+    "test:bootstrap": "node scripts/bootstrap-test.js",
+    "shot": "node scripts/render-shot.js gemgrab blaze shots/arena.png"
+  }
+}
