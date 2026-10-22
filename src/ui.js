@@ -403,6 +403,12 @@ export class UI {
         <h3>${b.name} <span class="muted">· ${b.role}</span></h3>
         <p>${b.desc}</p>
         <p class="bd-tip">💡 ${b.tip}</p>
+        ${(() => {
+          const rec = (this.save.records || {})[id];
+          if (!rec || !rec.matches) return '<p class="bd-record">Ещё не играли этим бравлером</p>';
+          const wr = Math.round((rec.wins / rec.matches) * 100);
+          return `<p class="bd-record">Матчей: ${rec.matches} · Побед: ${rec.wins} (${wr}%) · Убийств: ${rec.kills} · Урона: ${Math.round(rec.damage)}</p>`;
+        })()}
         <div class="bd-chips">
           <span class="chip">HP <b>${b.hp}</b></span>
           <span class="chip">Урон <b>${dmg}</b></span>
@@ -706,6 +712,15 @@ export class UI {
     const trophyEl = el('result-trophy');
     trophyEl.classList.toggle('negative', delta < 0);
     setText(trophyEl, `${delta >= 0 ? '+' : ''}${delta} 🏆`);
+    const mvpEl = el('result-mvp');
+    if (result.mvp) {
+      const b = BRAWLER_BY_ID[result.mvp.brawlerId];
+      const who = result.mvp.isPlayer ? 'ВЫ' : result.mvp.name;
+      mvpEl.innerHTML = `⭐ Лучший игрок: <b>${who}</b> · ${b.name} · ${result.mvp.kills} убийств`;
+      mvpEl.classList.add('show');
+    } else {
+      mvpEl.classList.remove('show');
+    }
     const note = result.win
       ? `Серия побед: ${this.save.streak} · Всего кубков: ${this.save.trophies}`
       : result.draw

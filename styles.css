@@ -1179,3 +1179,22 @@ body.touch .hud-bottom { padding-bottom: max(10px, env(safe-area-inset-bottom));
 .sb-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .sb-kd { font-size: 11px; color: #c9d9f5; font-variant-numeric: tabular-nums; }
 .sb-good { color: var(--gold); font-size: 11px; font-weight: 900; min-width: 26px; text-align: right; }
+
+.result-mvp {
+  display: none;
+  margin: 0 auto 10px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  color: #ffe9b0;
+  background: rgba(255, 204, 77, 0.09);
+  border: 1px solid rgba(255, 204, 77, 0.3);
+  width: fit-content;
+  max-width: 100%;
+}
+.result-mvp.show { display: block; animation: mvpIn 0.5s ease both; }
+@keyframes mvpIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
+.result-mvp b { color: #fff; }
+.bd-record { font-size: 11px; color: #9fb4d8; margin-top: 6px !important; }

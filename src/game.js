@@ -2034,6 +2034,23 @@ export class Game {
     this.endDelay = 2.2;
     const draw = winner === 'draw';
     const win = !draw && winner === this.playerTeam;
+    // Лучший игрок матча (MVP)
+    let mvp = null;
+    let mvpScore = -Infinity;
+    for (const p of this.players) {
+      const score =
+        p.kills * 3 +
+        p.deaths * -0.6 +
+        p.damageDealt / 260 +
+        p.healing / 320 +
+        (p.team === this.playerTeam ? p.gems * 0.5 : p.gems * 0.5) +
+        (this.mode === 'brawlball' && this.ball && this.ball.lastTouchId === p.id ? 2 : 0);
+      if (score > mvpScore) {
+        mvpScore = score;
+        mvp = p;
+      }
+    }
+
     this.result = {
       mode: this.mode,
       modeName: MODES[this.mode].name,
@@ -2049,6 +2066,14 @@ export class Game {
       gems: { ...this.gems },
       duration: Math.round(this.matchTime - this.timeLeft),
       stats: { ...this.stats },
+      mvp: mvp ? {
+        name: mvp.name,
+        brawlerId: mvp.brawlerId,
+        team: mvp.team,
+        isPlayer: mvp.isPlayer,
+        kills: mvp.kills,
+        damage: Math.round(mvp.damageDealt),
+      } : null,
       player: this.player ? {
         name: this.player.name,
         brawlerId: this.player.brawlerId,

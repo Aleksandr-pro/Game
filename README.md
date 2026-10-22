@@ -108,8 +108,10 @@ scripts/            — проверки: карты, headless-симуляци�
 
 ```bash
 npm run check                     # карты: симметрия, спавны, доступность центра
+npm run test:abilities            # все суперы и гаджеты: урон, лечение, эффекты, кулдауны
 npm run sim                       # headless-прогон 9 матчей (все бравлеры × все режимы)
 npm i --no-save jsdom @napi-rs/canvas
+npm run test:input                # мышь, клавиатура, виртуальные стики, автоприцел
 npm run test:ui                   # интерфейс: экраны, HUD, настройки (jsdom)
 npm run test:bootstrap            # полная инициализация игры и матч от кнопки «В бой»
 npm run shot                      # рендер арены в PNG (нужен @napi-rs/canvas)
