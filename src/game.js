@@ -56,6 +56,7 @@ export class Game {
     this.effects = [];
     this.particles = [];
     this.floaters = [];
+    this.decals = [];
     this.timers = [];
     this.feed = [];
     this.shake = 0;
@@ -332,9 +333,34 @@ export class Game {
       maxSize: 7,
       maxLife: 0.6,
     });
+    this.burst(x, y, ['#ffe9a8', '#ffb347'], 10, {
+      maxSpeed: radius * 4.4,
+      minSpeed: radius * 1.6,
+      minSize: 2,
+      maxSize: 4,
+      maxLife: 0.45,
+      shape: 'streak',
+      drag: 0.86,
+    });
+    this.addEffect('smoke', { x, y, radius, life: 0.9 });
+    this.addEffect('flash', { x, y, size: radius * 0.9, color: colors.color || '#ffe9a8', life: 0.18 });
+    this.decals.push({
+      kind: 'scorch',
+      x, y,
+      r: radius * 0.78,
+      rot: rand(0, TAU),
+      life: 7,
+      maxLife: 7,
+    });
   }
 
   healPlayer(target, amount, source) {
+    if (amount > 0) {
+      this.addEffect('heal', { x: target.x, y: target.y, radius: target.radius * 1.2, life: 0.6 });
+      this.burst(target.x, target.y - target.radius * 0.5, ['#a9ffd0', '#eafff3'], 5, {
+        maxSpeed: 60, up: 40, maxSize: 3, maxLife: 0.6, gravity: -40, shape: 'glow', drag: 0.94,
+      });
+    }
     if (!target.alive) return 0;
     const before = target.hp;
     target.hp = Math.min(target.maxHp, target.hp + amount);
@@ -404,6 +430,10 @@ export class Game {
       this.killPlayer(target, source);
     } else {
       const b = BRAWLER_BY_ID[target.brawlerId];
+      this.addEffect('spark', { x: target.x, y: target.y, angle: rand(0, TAU), color: opts.color || '#ffe9a8', life: 0.24 });
+      this.burst(target.x, target.y, ['#ffffff', opts.color || '#ffd9a3'], 4, {
+        maxSpeed: 150, minSpeed: 40, maxSize: 3.5, maxLife: 0.3, shape: 'streak',
+      });
       audio.play('hit', { pan: 0 });
       if (opts.slow) {
         target.slowTime = Math.max(target.slowTime, opts.slowTime || 1.5);
@@ -457,6 +487,8 @@ export class Game {
       maxLife: 0.8,
     });
     this.addEffect('ring', { x: victim.x, y: victim.y, radius: victim.radius * 3, color: '#ffffff', width: 4, life: 0.4 });
+    this.addEffect('flash', { x: victim.x, y: victim.y, size: victim.radius * 1.6, color: '#ffffff', life: 0.2 });
+    this.addEffect('smoke', { x: victim.x, y: victim.y, radius: victim.radius * 1.6, life: 0.6 });
     audio.play('death');
 
     if (killer && killer !== victim) {
@@ -519,6 +551,17 @@ export class Game {
     const muzzleX = p.x + Math.cos(angle) * (p.radius + 8);
     const muzzleY = p.y + Math.sin(angle) * (p.radius + 8);
     const color = p.team === 0 ? '#8fd4ff' : '#ffa3b4';
+
+    // вспышка у дула
+    this.addEffect('flash', {
+      x: muzzleX, y: muzzleY,
+      size: a.kind === 'single' ? p.radius * 1.5 : p.radius * 1.05,
+      color,
+      life: 0.12,
+    });
+    this.burst(muzzleX, muzzleY, [color, '#ffffff'], 4, {
+      maxSpeed: 260, minSpeed: 80, maxSize: 3, maxLife: 0.22, shape: 'streak', drag: 0.85,
+    });
 
     // отдача
     p.vx -= Math.cos(angle) * (a.kind === 'single' ? 46 : 14);
@@ -977,7 +1020,34 @@ export class Game {
       p.rot += p.spin * dt;
     }
     this.particles = this.particles.filter((p) => p.life > 0);
-    if (this.particles.length > 500) this.particles.splice(0, this.particles.length - 500);
+    if (this.particles.length > 600) this.particles.splice(0, this.particles.length - 600);
+
+    // следы на земле медленно тают
+    for (const d of this.decals) d.life -= dt;
+    this.decals = this.decals.filter((d) => d.life > 0);
+    if (this.decals.length > 40) this.decals.splice(0, this.decals.length - 40);
+
+    // пыль из-под ног бегущих бойцов
+    for (const pl of this.players) {
+      if (!pl.alive || pl.portrait) continue;
+      const sp = Math.hypot(pl.vx, pl.vy);
+      if (sp < 90) continue;
+      pl._dustT = (pl._dustT || 0) - dt;
+      if (pl._dustT > 0) continue;
+      pl._dustT = 0.16 + Math.random() * 0.1;
+      this.addParticle({
+        x: pl.x + rand(-6, 6),
+        y: pl.y + pl.radius * 0.6,
+        vx: -pl.vx * 0.12 + rand(-14, 14),
+        vy: -pl.vy * 0.12 + rand(-6, 6),
+        size: 3 + Math.random() * 3,
+        color: 'rgba(225,225,215,0.5)',
+        life: 0.35 + Math.random() * 0.2,
+        shape: 'smoke',
+        drag: 0.9,
+        gravity: -6,
+      });
+    }
 
     // Пауза между голами
     if (this.phase === 'goal') {
@@ -1463,6 +1533,7 @@ export class Game {
       p.bot.thinkTimer = 0.15;
     }
     this.addEffect('ring', { x: p.x, y: p.y, radius: p.radius * 4, color: TEAM_COLORS[p.team].main, width: 4, life: 0.6 });
+    this.addEffect('flash', { x: p.x, y: p.y, size: p.radius * 1.4, color: TEAM_COLORS[p.team].light, life: 0.3 });
     this.burst(p.x, p.y, [TEAM_COLORS[p.team].light, '#ffffff'], 14, { maxSpeed: 180 });
   }
 
@@ -1988,6 +2059,7 @@ export class Game {
     this.projectiles = [];
     this.mines = [];
     this.zones = [];
+    this.decals = [];
   }
 
   // ---------- Камера ----------
