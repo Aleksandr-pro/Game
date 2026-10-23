@@ -83,12 +83,101 @@ const ui = new UI({
   onLeave: () => leaveMatch(),
   onAgain: () => startMatch(),
   onMenu: () => goMenu(),
+  onInstall: () => doInstall(),
+  onDownload: () => ui.openDownload(),
 });
+ui.onDownloadReady = () => refreshInstallUI();
 ui.setInput(input);
 
 audio.setSfxVolume(save.settings.sfx);
 audio.setMusicVolume(save.settings.music);
 ui.refreshSettingsUI();
+
+// ---------- Установка (PWA) и скачивание ----------
+let installPrompt = null;
+const mq = (query) => (typeof window.matchMedia === 'function' ? window.matchMedia(query).matches : false);
+const isStandalone = () =>
+  mq('(display-mode: standalone)') ||
+  mq('(display-mode: fullscreen)') ||
+  window.navigator.standalone === true;
+const isIOS = () => /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+function refreshInstallUI() {
+  const btn = document.getElementById('btn-install');
+  const btn2 = document.getElementById('btn-install-2');
+  const hint = document.getElementById('install-hint');
+  const installed = isStandalone();
+  const canInstall = !!installPrompt && !installed;
+
+  if (btn) btn.classList.toggle('hidden', !canInstall);
+  if (btn2) {
+    btn2.textContent = installed ? 'Уже установлено' : canInstall ? 'Установить' : 'Как установить';
+    btn2.disabled = installed;
+    btn2.style.opacity = installed ? '0.6' : '1';
+  }
+  if (hint) {
+    if (installed) hint.textContent = 'Игра уже открыта как приложение ✓';
+    else if (canInstall) hint.textContent = 'Нажмите «Установить» — и игра появится на рабочем столе';
+    else if (isIOS()) hint.textContent = 'Safari: «Поделиться» → «На экран „Домой“»';
+    else hint.textContent = 'Chrome / Edge: меню ⋮ → «Установить приложение»';
+  }
+}
+
+async function doInstall() {
+  audio.resume();
+  if (installPrompt) {
+    installPrompt.prompt();
+    try {
+      const res = await installPrompt.userChoice;
+      if (res && res.outcome === 'accepted') ui.toast('Игра установлена — ищите иконку на рабочем столе');
+    } catch (_) {}
+    installPrompt = null;
+    refreshInstallUI();
+    return;
+  }
+  if (isStandalone()) {
+    ui.toast('Игра уже установлена');
+    return;
+  }
+  ui.openDownload();
+  ui.toast(isIOS() ? 'Safari: «Поделиться» → «На экран „Домой“»' : 'Меню браузера ⋮ → «Установить приложение»');
+}
+
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  installPrompt = e;
+  refreshInstallUI();
+});
+window.addEventListener('appinstalled', () => {
+  installPrompt = null;
+  refreshInstallUI();
+  ui.toast('Готово! Brawl Arena установлена');
+});
+
+for (const id of ['btn-install', 'btn-install-2']) {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('click', doInstall);
+}
+
+// Регистрация service worker: офлайн-режим и установка
+if ('serviceWorker' in navigator && window.location.protocol.startsWith('http')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker
+      .register('sw.js')
+      .then((reg) => {
+        reg.addEventListener('updatefound', () => {
+          const worker = reg.installing;
+          if (!worker) return;
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+              ui.toast('Доступна новая версия — перезагрузите страницу');
+            }
+          });
+        });
+      })
+      .catch((err) => console.warn('SW не зарегистрирован:', err));
+  });
+}
 
 // Первый жест включает звук в браузере
 function firstGesture() {
@@ -105,6 +194,15 @@ window.addEventListener('orientationchange', () => setTimeout(() => renderer.res
 
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && game && !gameOver && !paused) togglePause(true);
+});
+
+// Быстрый запуск из ярлыка (?quick=1)
+window.addEventListener('load', () => {
+  refreshInstallUI();
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('quick') === '1') {
+    setTimeout(() => startMatch(), 150);
+  }
 });
 
 function startMatch() {

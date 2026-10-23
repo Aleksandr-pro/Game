@@ -78,6 +78,8 @@ export class UI {
     this.onLeave = opts.onLeave || (() => {});
     this.onAgain = opts.onAgain || (() => {});
     this.onMenu = opts.onMenu || (() => {});
+    this.onInstall = opts.onInstall || (() => {});
+    this.onDownload = opts.onDownload || (() => {});
     this.game = null;
     this.hudCache = {};
     this.lastBanner = null;
@@ -155,6 +157,15 @@ export class UI {
       this.onSoundToggle();
       this.updateHome();
     });
+    for (const id of ['btn-download', 'btn-download-2']) {
+      const btn = el(id);
+      if (btn) {
+        btn.addEventListener('click', () => {
+          this.audio.play('click');
+          this.openDownload();
+        });
+      }
+    }
 
     document.querySelectorAll('[data-close]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -346,6 +357,11 @@ export class UI {
     return url;
   }
 
+  openDownload() {
+    el('screen-download').classList.remove('hidden');
+    if (this.onDownloadReady) this.onDownloadReady();
+  }
+
   // ---------- Бравлеры ----------
   openBrawlers() {
     el('screen-brawlers').classList.remove('hidden');
@@ -453,6 +469,7 @@ export class UI {
     el('screen-brawlers').classList.add('hidden');
     el('screen-help').classList.add('hidden');
     el('screen-settings').classList.add('hidden');
+    el('screen-download').classList.add('hidden');
     el('hud').classList.remove('hidden');
     el('scoreboard').classList.add('hidden');
     this.hudCache = {};
@@ -741,6 +758,7 @@ export class UI {
     el('screen-brawlers').classList.add('hidden');
     el('screen-settings').classList.add('hidden');
     el('screen-help').classList.add('hidden');
+    el('screen-download').classList.add('hidden');
     el('screen-home').classList.remove('hidden');
     this.tip = TIPS[Math.floor(Math.random() * TIPS.length)];
     el('tip-text').textContent = this.tip;
