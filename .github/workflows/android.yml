@@ -33,6 +33,7 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
   group: android-${{ github.ref }}
@@ -105,9 +106,21 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           PR: ${{ github.event.pull_request.number }}
         run: |
-          if [ ! -f /tmp/gradle-build.log ]; then echo "лога нет" >&2; exit 0; fi
-          { echo '```text'; tail -60 /tmp/gradle-build.log; echo '```'; } > /tmp/comment.md
-          gh pr comment "$PR" --body-file /tmp/comment.md || true
+          if [ ! -f /tmp/gradle-build.log ]; then echo "Gradle не оставил лога" >> "$GITHUB_STEP_SUMMARY"; exit 0; fi
+          TAIL=$(tail -60 /tmp/gradle-build.log)
+          {
+            echo "### ❌ Ошибка сборки APK"
+            echo '```text'
+            echo "$TAIL"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          {
+            echo "### ❌ Ошибка сборки APK"
+            echo '```text'
+            echo "$TAIL"
+            echo '```'
+          } > /tmp/comment.md
+          gh pr comment "$PR" --body-file /tmp/comment.md
 
       - name: Проверка подписи APK
         run: |
