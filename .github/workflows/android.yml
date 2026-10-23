@@ -127,8 +127,20 @@ jobs:
           APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
           echo "APK: $APK"
           BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
-          "$BT/apksigner" verify --print-certs "$APK" | head -12
-          "$BT/aapt" dump badging "$APK" | grep -E "package:|application-label|launchable" | head -5
+          CERTS=$("$BT/apksigner" verify --print-certs "$APK")
+          echo "$CERTS" | head -12
+          "$BT/aapt" dump badging "$APK" | grep -E "package:|application-label|sdkVersion|targetSdkVersion" | head -5
+
+          # Обновление установится поверх старой версии только при той же подписи,
+          # поэтому сверяем отпечаток сертификата с ключом из репозитория.
+          ACTUAL=$(echo "$CERTS" | grep -i "SHA-256 digest" | head -1 | awk '{print $NF}' | tr 'A-F' 'a-f')
+          EXPECTED=474fc825f4a5de74efccf994f47ebd64b8b6a9cae418282c2eac69febe8b771c
+          echo "Отпечаток подписи: $ACTUAL"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::APK подписан не ключом из android/keystore — обновления не установятся"
+            exit 1
+          fi
+          echo "Подпись совпадает с android/keystore/brawl-arena.p12"
 
       - name: Подготовка файлов релиза
         run: |
