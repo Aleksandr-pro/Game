@@ -24,6 +24,7 @@ const ASSETS = [
   './src/utils.js',
   './src/pathfinding.js',
   './src/art.js',
+  './src/textures.js',
   './src/updater.js',
   './icons/icon-192.png',
   './icons/icon-512.png',

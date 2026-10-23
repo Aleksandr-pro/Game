@@ -2,13 +2,17 @@
 // Всё рисуется процедурно — без картинок и внешних ресурсов.
 import { TILE } from './config.js';
 import { WALL, CRATE, WATER, BUSH } from './maps.js';
+import { fillTile, getTexture } from './textures.js';
 
 const TAU = Math.PI * 2;
 
+// 32-битный хеш координат. Важно: только целочисленная арифметика (Math.imul),
+// иначе произведение выходит за точность double и хеш вырождается в пару значений.
 function hash2(x, y) {
-  let h = (x * 374761393 + y * 668265263) | 0;
-  h = (h ^ (h >> 13)) * 1274126177;
-  return ((h ^ (h >> 16)) >>> 0) / 4294967295;
+  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
 }
 
 function rr(ctx, x, y, w, h, r) {
@@ -311,12 +315,12 @@ export function paintArena(map, version = 0) {
     g.fill();
   }
 
-  // 2.6. Тонкий узор поверхности (диагональная штриховка)
+  // 2.6. Очень тонкий диагональный узор поверхности
   g.save();
-  g.globalAlpha = 0.035;
+  g.globalAlpha = 0.018;
   g.strokeStyle = '#ffffff';
-  g.lineWidth = 6;
-  for (let i = -H; i < W + H; i += 46) {
+  g.lineWidth = 4;
+  for (let i = -H; i < W + H; i += 58) {
     g.beginPath();
     g.moveTo(i, 0);
     g.lineTo(i + H, H);
@@ -333,9 +337,14 @@ export function paintArena(map, version = 0) {
       const n = hash2(x, y);
       if (tile === WALL || tile === CRATE || tile === WATER) continue;
 
-      const tone = shade(n > 0.5 ? theme.floor2 : theme.floor, (n - 0.5) * 0.06);
-      g.fillStyle = tone;
+      // База плитки: ровная, без «шахматки» — фактуру даёт текстура.
+      g.fillStyle = theme.floor;
       g.fillRect(px, py, TILE, TILE);
+      // еле заметная разница соседних плит
+      if (n > 0.5) {
+        g.fillStyle = 'rgba(255,255,255,0.018)';
+        g.fillRect(px, py, TILE, TILE);
+      }
 
       // едва заметные швы и блик на стыке плит
       g.fillStyle = 'rgba(0,0,0,0.07)';
@@ -389,6 +398,22 @@ export function paintArena(map, version = 0) {
       }
     }
   }
+
+  // 3.5. Тканевая/каменная текстура поверхности
+  const floorTex = map.id === 'ice' ? 'ice' : map.id === 'stadium' ? 'grass' : map.id === 'canyon' ? 'sand' : 'stone';
+  fillTile(g, floorTex, 0, 0, W, H, {
+    scale: 0.62,
+    alpha: 0.3,
+    composite: 'overlay',
+    seed: 3,
+  });
+  // крупный «загрязнённый» слой для реалистичности
+  fillTile(g, 'stone', 0, 0, W, H, {
+    scale: 1.9,
+    alpha: 0.12,
+    composite: 'multiply',
+    seed: 7,
+  });
 
   // 4. Мелкий декор на полу
   for (let y = 0; y < map.height; y++) {
@@ -450,6 +475,57 @@ export function paintArena(map, version = 0) {
       g.fillStyle = dg;
       g.fillRect(px, py, TILE, TILE);
 
+      // текстура воды + глубина
+      fillTile(g, 'water', px, py, TILE, TILE, {
+        scale: 0.42,
+        alpha: 0.5,
+        composite: 'overlay',
+        seed: 5,
+        offsetX: x * 37,
+        offsetY: y * 53,
+      });
+      g.fillStyle = 'rgba(3, 24, 40, 0.26)';
+      g.globalCompositeOperation = 'multiply';
+      g.fillRect(px, py, TILE, TILE);
+      g.globalCompositeOperation = 'source-over';
+
+      // мягкий берег: затемняем края там, где вода граничит с сушей
+      const at = (dx, dy) => {
+        const tx = x + dx;
+        const ty = y + dy;
+        if (tx < 0 || ty < 0 || tx >= map.width || ty >= map.height) return null;
+        return map.grid[ty][tx];
+      };
+      const bank = 'rgba(4, 18, 30, 0.34)';
+      if (at(0, -1) !== WATER) {
+        const bg2 = g.createLinearGradient(0, py, 0, py + 16);
+        bg2.addColorStop(0, bank);
+        bg2.addColorStop(1, 'rgba(4,18,30,0)');
+        g.fillStyle = bg2;
+        g.fillRect(px, py, TILE, 16);
+      }
+      if (at(0, 1) !== WATER) {
+        const bg2 = g.createLinearGradient(0, py + TILE, 0, py + TILE - 16);
+        bg2.addColorStop(0, bank);
+        bg2.addColorStop(1, 'rgba(4,18,30,0)');
+        g.fillStyle = bg2;
+        g.fillRect(px, py + TILE - 16, TILE, 16);
+      }
+      if (at(-1, 0) !== WATER) {
+        const bg2 = g.createLinearGradient(px, 0, px + 16, 0);
+        bg2.addColorStop(0, bank);
+        bg2.addColorStop(1, 'rgba(4,18,30,0)');
+        g.fillStyle = bg2;
+        g.fillRect(px, py, 16, TILE);
+      }
+      if (at(1, 0) !== WATER) {
+        const bg2 = g.createLinearGradient(px + TILE, 0, px + TILE - 16, 0);
+        bg2.addColorStop(0, bank);
+        bg2.addColorStop(1, 'rgba(4,18,30,0)');
+        g.fillStyle = bg2;
+        g.fillRect(px + TILE - 16, py, 16, TILE);
+      }
+
       // каустика
       g.strokeStyle = 'rgba(170,240,255,0.16)';
       g.lineWidth = 2.4;
@@ -485,66 +561,7 @@ export function paintArena(map, version = 0) {
     }
   }
 
-  // 6. Ящики
-  for (let y = 0; y < map.height; y++) {
-    for (let x = 0; x < map.width; x++) {
-      if (map.grid[y][x] !== CRATE) continue;
-      const px = x * TILE;
-      const py = y * TILE;
-      // тень
-      g.fillStyle = 'rgba(0,0,0,0.34)';
-      rr(g, px + 7, py + 15, TILE - 10, TILE - 12, 12);
-      g.fill();
-
-      const wg = g.createLinearGradient(px, py, px, py + TILE);
-      wg.addColorStop(0, '#c08a52');
-      wg.addColorStop(0.35, '#a06a38');
-      wg.addColorStop(1, '#6f4523');
-      g.fillStyle = wg;
-      rr(g, px + 5, py + 4, TILE - 10, TILE - 12, 10);
-      g.fill();
-
-      // доски
-      g.strokeStyle = 'rgba(60,32,12,0.5)';
-      g.lineWidth = 2;
-      for (let i = 1; i < 3; i++) {
-        const yy = py + 4 + ((TILE - 12) / 3) * i;
-        g.beginPath();
-        g.moveTo(px + 7, yy);
-        g.lineTo(px + TILE - 7, yy);
-        g.stroke();
-      }
-      // металлические уголки и центральная полоса
-      g.fillStyle = 'rgba(84,90,102,0.9)';
-      g.fillRect(px + 8, py + TILE / 2 - 5, TILE - 16, 9);
-      g.fillStyle = 'rgba(255,255,255,0.22)';
-      g.fillRect(px + 8, py + TILE / 2 - 5, TILE - 16, 2);
-      g.fillStyle = 'rgba(84,90,102,0.75)';
-      for (const [cx2, cy2] of [[6, 5], [TILE - 20, 5], [6, TILE - 23], [TILE - 20, TILE - 23]]) {
-        g.fillRect(px + cx2, py + cy2, 14, 12);
-      }
-
-      // обводка + блик
-      g.strokeStyle = 'rgba(48,26,10,0.9)';
-      g.lineWidth = 3;
-      rr(g, px + 5, py + 4, TILE - 10, TILE - 12, 10);
-      g.stroke();
-      g.strokeStyle = 'rgba(255,215,160,0.35)';
-      g.lineWidth = 2;
-      g.beginPath();
-      g.moveTo(px + 14, py + 8);
-      g.lineTo(px + TILE - 16, py + 8);
-      g.stroke();
-
-      // гвозди
-      g.fillStyle = '#3b4049';
-      for (const [dx, dy] of [[13, 12], [TILE - 14, 12], [13, TILE - 18], [TILE - 14, TILE - 18]]) {
-        g.beginPath();
-        g.arc(px + dx, py + dy, 2.4, 0, TAU);
-        g.fill();
-      }
-    }
-  }
+  // Ящики рисуются динамически (их можно сломать) — см. drawCrate().
 
   // 7. Стены
   for (let y = 0; y < map.height; y++) {
@@ -613,6 +630,39 @@ export function paintArena(map, version = 0) {
       g.fillRect(px + 10, py + 4, TILE - 20, 2.5);
       g.fillStyle = 'rgba(0,0,0,0.22)';
       g.fillRect(px + 8, py + 21, TILE - 16, 2);
+
+      // 3D-объём: передняя и правая грани
+      if (!border) {
+        if (map.grid[y + 1]?.[x] !== WALL) {
+          const fg = g.createLinearGradient(0, py + TILE - 18, 0, py + TILE + 2);
+          fg.addColorStop(0, shade(theme.wallDark, 0.08));
+          fg.addColorStop(1, shade(theme.wallDark, -0.45));
+          g.fillStyle = fg;
+          rr(g, px + 3, py + TILE - 15, TILE - 6, 17, 7);
+          g.fill();
+        }
+        if (map.grid[y]?.[x + 1] !== WALL) {
+          const rg = g.createLinearGradient(px + TILE - 12, 0, px + TILE + 2, 0);
+          rg.addColorStop(0, 'rgba(0,0,0,0.18)');
+          rg.addColorStop(1, 'rgba(0,0,0,0.4)');
+          g.fillStyle = rg;
+          rr(g, px + TILE - 11, py + 6, 12, TILE - 14, 6);
+          g.fill();
+        }
+        // текстура камня на блоке
+        g.save();
+        rr(g, px + 1, py + 2, TILE - 2, TILE - 4, 12);
+        g.clip();
+        fillTile(g, style.wallPattern === 'metal' ? 'metal' : style.wallPattern === 'ice' ? 'ice' : 'stone', px, py, TILE, TILE, {
+          scale: 0.38,
+          alpha: 0.26,
+          composite: 'overlay',
+          seed: 11,
+          offsetX: x * 23,
+          offsetY: y * 31,
+        });
+        g.restore();
+      }
 
       // узор
       if (style.wallPattern === 'brick') {
@@ -1450,5 +1500,241 @@ export function drawDecals(ctx, game, view) {
       ctx.ellipse(d.x, d.y, d.r, d.r * 0.5, 0, 0, TAU);
       ctx.fill();
     }
+  }
+}
+
+// ---------- Ящики (динамические: их можно сломать) ----------
+const crateSprites = new Map();
+
+function makeCrateSprite(theme, variant) {
+  const c = document.createElement('canvas');
+  const S = TILE * 2; // рисуем в 2× и уменьшаем — края остаются гладкими
+  c.width = S;
+  c.height = S;
+  const g = c.getContext('2d');
+  if (!g) return null;
+  g.scale(2, 2);
+
+  // тень
+  g.fillStyle = 'rgba(0,0,0,0.34)';
+  rr(g, 6, 12, TILE - 9, TILE - 10, 11);
+  g.fill();
+
+  // корпус
+  const wg = g.createLinearGradient(4, 4, TILE - 6, TILE - 4);
+  wg.addColorStop(0, variant ? '#c8945a' : '#c08a52');
+  wg.addColorStop(0.32, '#a46e3a');
+  wg.addColorStop(1, '#67411f');
+  g.fillStyle = wg;
+  rr(g, 5, 4, TILE - 10, TILE - 12, 10);
+  g.fill();
+
+  // текстура дерева
+  g.save();
+  rr(g, 5, 4, TILE - 10, TILE - 12, 10);
+  g.clip();
+  fillTile(g, 'wood', 0, 0, TILE, TILE, {
+    scale: 0.3,
+    alpha: 0.3,
+    composite: 'overlay',
+    seed: 13 + variant,
+  });
+  g.restore();
+
+  // доски
+  g.strokeStyle = 'rgba(58,32,12,0.5)';
+  g.lineWidth = 2;
+  for (let i = 1; i < 3; i++) {
+    const yy = 4 + ((TILE - 12) / 3) * i;
+    g.beginPath();
+    g.moveTo(8, yy);
+    g.lineTo(TILE - 8, yy);
+    g.stroke();
+  }
+
+  // металлические полосы
+  g.fillStyle = 'rgba(120,130,146,0.95)';
+  g.fillRect(7, TILE / 2 - 5, TILE - 14, 9);
+  g.fillStyle = 'rgba(255,255,255,0.3)';
+  g.fillRect(7, TILE / 2 - 5, TILE - 14, 2);
+  g.fillStyle = 'rgba(0,0,0,0.25)';
+  g.fillRect(7, TILE / 2 + 2, TILE - 14, 2);
+
+  // уголки
+  for (const [cx, cy] of [[5, 4], [TILE - 19, 4], [5, TILE - 24], [TILE - 19, TILE - 24]]) {
+    const mg = g.createLinearGradient(cx, cy, cx + 14, cy + 12);
+    mg.addColorStop(0, 'rgba(170,178,190,0.95)');
+    mg.addColorStop(1, 'rgba(84,90,102,0.95)');
+    g.fillStyle = mg;
+    rr(g, cx, cy, 14, 12, 3);
+    g.fill();
+  }
+
+  // верхняя подсветка и внутренняя тень
+  g.strokeStyle = 'rgba(255,226,180,0.4)';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.moveTo(13, 8);
+  g.lineTo(TILE - 15, 8);
+  g.stroke();
+  g.strokeStyle = 'rgba(46,24,8,0.9)';
+  g.lineWidth = 3;
+  rr(g, 5, 4, TILE - 10, TILE - 12, 10);
+  g.stroke();
+
+  // гвозди
+  g.fillStyle = '#3b4049';
+  for (const [dx, dy] of [[12, 10], [TILE - 13, 10], [12, TILE - 18], [TILE - 13, TILE - 18]]) {
+    g.beginPath();
+    g.arc(dx, dy, 2.2, 0, TAU);
+    g.fill();
+  }
+  return c;
+}
+
+export function drawCrate(ctx, x, y, theme, variant = 0) {
+  const key = `${theme.floor}:${variant}`;
+  let sprite = crateSprites.get(key);
+  if (sprite === undefined) {
+    try {
+      sprite = makeCrateSprite(theme, variant);
+    } catch (_) {
+      sprite = null;
+    }
+    crateSprites.set(key, sprite);
+  }
+  if (!sprite) {
+    ctx.fillStyle = '#a06a38';
+    rr(ctx, x + 5, y + 4, TILE - 10, TILE - 12, 10);
+    ctx.fill();
+    return;
+  }
+  ctx.drawImage(sprite, x, y, TILE, TILE);
+}
+
+// ---------- Кусты: спрайты вместо градиентов на каждый кадр ----------
+const bushSprites = new Map();
+
+function makeBushSprite(theme, seed) {
+  const c = document.createElement('canvas');
+  const S = 176;
+  c.width = S;
+  c.height = S;
+  const g = c.getContext('2d');
+  if (!g) return null;
+  g.scale(2, 2);
+  const W = 88;
+
+  const rand = (i) => hash2(seed * 31 + i, i * 17 + seed);
+
+  // тень
+  g.fillStyle = 'rgba(0,0,0,0.3)';
+  g.beginPath();
+  g.ellipse(W / 2, 76, 40, 13, 0, 0, TAU);
+  g.fill();
+
+  // тёмная подложка
+  g.fillStyle = shade(theme.bush2, -0.32);
+  g.beginPath();
+  g.ellipse(W / 2, 50, 40, 32, 0, 0, TAU);
+  g.fill();
+
+  // объёмные листья
+  const lobes = [
+    [20, 58, 22], [58, 60, 23], [38, 40, 27],
+    [15, 34, 17], [63, 33, 18], [41, 66, 19],
+    [30, 24, 13], [52, 22, 12],
+  ];
+  for (let i = 0; i < lobes.length; i++) {
+    const [bx, by, br] = lobes[i];
+    const jx = (rand(i) - 0.5) * 4;
+    const jy = (rand(i + 9) - 0.5) * 4;
+    const tone = i % 3 === 0 ? theme.bush3 : i % 3 === 1 ? theme.bush2 : theme.bush;
+    const grad = g.createRadialGradient(
+      bx + jx - br * 0.35, by + jy - br * 0.45, br * 0.15,
+      bx + jx, by + jy, br * 1.12
+    );
+    grad.addColorStop(0, shade(tone, 0.2));
+    grad.addColorStop(0.55, tone);
+    grad.addColorStop(1, shade(tone, -0.36));
+    g.fillStyle = grad;
+    g.beginPath();
+    g.arc(bx + jx, by + jy, br, 0, TAU);
+    g.fill();
+  }
+
+  // освещённые верхушки
+  g.fillStyle = 'rgba(200,255,210,0.22)';
+  for (const [bx, by, br] of [[30, 22, 7], [50, 18, 6], [16, 30, 5]]) {
+    g.beginPath();
+    g.arc(bx, by, br, 0, TAU);
+    g.fill();
+  }
+
+  // прожилки
+  g.strokeStyle = 'rgba(10,40,26,0.2)';
+  g.lineWidth = 1.5;
+  for (let i = 0; i < 4; i++) {
+    const a = -1.9 + i * 0.55;
+    g.beginPath();
+    g.moveTo(W / 2 + Math.cos(a) * 6, 46 + Math.sin(a) * 5);
+    g.quadraticCurveTo(
+      W / 2 + Math.cos(a) * 18, 46 + Math.sin(a) * 16,
+      W / 2 + Math.cos(a) * 28, 46 + Math.sin(a) * 26
+    );
+    g.stroke();
+  }
+
+  // контур
+  g.strokeStyle = 'rgba(8,26,20,0.26)';
+  g.lineWidth = 2;
+  g.beginPath();
+  g.ellipse(W / 2, 50, 42, 34, 0, 0, TAU);
+  g.stroke();
+
+  return c;
+}
+
+export function drawBush(ctx, x, y, theme, seedIdx, t) {
+  const key = `${theme.bush}:${seedIdx % 3}`;
+  let sprite = bushSprites.get(key);
+  if (sprite === undefined) {
+    try {
+      sprite = makeBushSprite(theme, seedIdx % 3 + 1);
+    } catch (_) {
+      sprite = null;
+    }
+    bushSprites.set(key, sprite);
+  }
+  if (!sprite) {
+    ctx.fillStyle = theme.bush2;
+    ctx.beginPath();
+    ctx.arc(x + TILE / 2, y + TILE / 2, TILE * 0.46, 0, TAU);
+    ctx.fill();
+    return;
+  }
+
+  // лёгкое «дыхание» куста — масштабом, без перерисовки градиентов
+  const sway = Math.sin(t * 1.7 + seedIdx * 1.3) * 0.022;
+  const w = TILE * (1 + sway);
+  const h = TILE * (1 - sway * 0.45);
+  const ox = (TILE - w) / 2;
+  const oy = (TILE - h) / 2 + Math.sin(t * 1.3 + seedIdx) * 0.8;
+  ctx.drawImage(sprite, x + ox, y + oy, w, h);
+
+  // светлячки
+  for (let i = 0; i < 2; i++) {
+    const a = t * 0.6 + i * 2.1 + seedIdx * 1.7;
+    const gx = x + 38 + Math.cos(a) * (16 + i * 7);
+    const gy = y + 42 + Math.sin(a * 1.3) * (12 + i * 5);
+    const spark = 0.35 + Math.sin(t * 3 + i * 2 + seedIdx) * 0.3;
+    if (spark <= 0.08) continue;
+    const g = ctx.createRadialGradient(gx, gy, 0, gx, gy, 8);
+    g.addColorStop(0, `rgba(220,255,190,${spark})`);
+    g.addColorStop(1, 'rgba(220,255,190,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(gx, gy, 8, 0, TAU);
+    ctx.fill();
   }
 }

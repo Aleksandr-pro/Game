@@ -5,6 +5,21 @@ import { Renderer } from './render.js';
 import { Game } from './game.js';
 import { audio } from './audio.js';
 import { BRAWLER_BY_ID, DEFAULT_SAVE, DEFAULT_SETTINGS, MODES } from './config.js';
+import { textureDataURL } from './textures.js';
+
+// Фактура для панелей меню: одна текстура, один раз на старте (дальше — CSS-кэш).
+function applyUiTextures() {
+  try {
+    const root = document.documentElement;
+    if (!root || !root.style) return;
+    const panel = textureDataURL('fabric', 96, 0.05);
+    if (panel) {
+      root.style.setProperty('--bs-tex-2', `url("${panel}")`);
+      root.style.setProperty('--bs-tex', `url("${panel}")`);
+    }
+  } catch (_) { /* без текстуры меню всё равно работает */ }
+}
+applyUiTextures();
 
 const SAVE_KEY = 'brawlarena.save.v2';
 
