@@ -8,6 +8,8 @@ const root = process.cwd();
 const outDir = path.join(root, 'release');
 fs.mkdirSync(outDir, { recursive: true });
 
+const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
+
 const result = await esbuild.build({
   entryPoints: [path.join(root, 'src/main.js')],
   bundle: true,
@@ -18,6 +20,10 @@ const result = await esbuild.build({
   legalComments: 'none',
   charset: 'utf8',
   logLevel: 'warning',
+  define: {
+    // версия попадает в сборку, чтобы её можно было показать в интерфейсе
+    __APP_VERSION__: JSON.stringify(pkg.version || '1.0.0'),
+  },
 });
 
 let js = result.outputFiles[0].text;

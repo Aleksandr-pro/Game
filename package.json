@@ -1,6 +1,6 @@
 {
   "name": "brawl-arena",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "description": "Brawl Arena — динамичный аркадный шутер 3v3 в браузере",
@@ -21,11 +21,14 @@
     "shot": "node scripts/render-shot.js gemgrab blaze shots/arena.png",
     "test:abilities": "node scripts/abilities-test.js",
     "test:input": "node scripts/input-test.js",
-    "test": "node scripts/check.js && node scripts/abilities-test.js && node scripts/sim.js && node scripts/input-test.js && node scripts/ui-test.js && node scripts/bootstrap-test.js && node scripts/offline-test.js",
+    "test": "node scripts/check.js && node scripts/abilities-test.js && node scripts/sim.js && node scripts/input-test.js && node scripts/ui-test.js && node scripts/bootstrap-test.js && node scripts/offline-test.js && node scripts/updater-test.js",
     "build": "node scripts/build-sw.js && node scripts/build-single.js",
     "build:sw": "node scripts/build-sw.js",
     "pack": "node scripts/build-single.js",
     "icons": "node scripts/icons.js",
-    "test:offline": "node scripts/offline-test.js"
+    "test:offline": "node scripts/offline-test.js",
+    "android:icons": "node scripts/android-icons.js",
+    "android:assets": "node scripts/build-single.js && node -e \"require('fs').copyFileSync('release/BrawlArena.html','android/app/src/main/assets/index.html')\"",
+    "test:updater": "node scripts/updater-test.js"
   }
 }

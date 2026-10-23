@@ -74,6 +74,10 @@ await new Promise((r) => setTimeout(r, 100));
 check(!win.document.getElementById('screen-download').classList.contains('hidden'), 'Окно «Скачать игру» открывается');
 const link = win.document.querySelector('#screen-download a[download]');
 check(!!link && link.getAttribute('href').includes('BrawlArena.html'), 'Ссылка на скачивание офлайн-версии есть');
+const apk = win.document.getElementById('apk-download');
+check(!!apk && apk.getAttribute('href').includes('/releases/download/android-latest/BrawlArena.apk'), 'Ссылка на APK ведёт в постоянный релиз');
+check(!!win.document.getElementById('check-update'), 'Кнопка проверки обновлений в окне скачивания');
+check(/^v/.test(win.document.getElementById('app-version').textContent.trim()), 'Версия игры показана внизу экрана');
 
 check(errors.length === 0, 'Нет ошибок при запуске' + (errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''));
 console.log(ok ? '\nOFFLINE OK' : '\nOFFLINE FAIL');
