@@ -400,6 +400,11 @@ export class UI {
     if (check) {
       check.addEventListener('click', () => {
         this.audio.play('click');
+        if (this.updateAvailable) {
+          this.toast('Загрузка обновления…');
+          installApk(this.latestApkUrl || APK_URL);
+          return;
+        }
         this.runUpdateCheck(true);
       });
     }
@@ -426,10 +431,12 @@ export class UI {
       try {
         const res = await checkForUpdate(force);
         this.applyUpdateResult(res);
+      } catch (e) {
+        this.setApkStatus('Не удалось проверить обновления', 'err');
       } finally {
         btn.disabled = false;
         btn.dataset.busy = '0';
-        if (!this.updateAvailable) btn.textContent = prev;
+        if (!this.updateAvailable && btn.textContent === 'Проверяю…') btn.textContent = prev;
       }
     }
   }
@@ -461,24 +468,16 @@ export class UI {
     }
 
     if (res.available) {
-      this.setApkStatus(`Доступно обновление: ${build} · у вас v${cur.name} (${cur.code})`, 'warn');
-      if (btn) {
-        btn.textContent = `Обновить до v${latest?.versionName || ''}`;
-        btn.onclick = (e) => {
-          e.preventDefault();
-          this.audio.play('click');
-          installApk(this.latestApkUrl);
-          this.toast('Загрузка обновления…');
-        };
-      }
+      if (btn) btn.textContent = `Обновить до v${latest?.versionName || ''}`;
+      this.setApkStatus(
+        `Доступно обновление: ${build} · у вас v${cur.name} (${cur.code})`,
+        'warn'
+      );
       if (chip) chip.classList.add('update');
       this.toast(`Вышло обновление ${build} — откройте 💾 → «Обновить»`);
     } else {
       this.setApkStatus(`У вас последняя версия · v${cur.name} (${cur.code})`, 'ok');
-      if (btn) {
-        btn.textContent = 'Проверить обновления';
-        btn.onclick = null;
-      }
+      if (btn) btn.textContent = 'Проверить обновления';
       if (chip) chip.classList.remove('update');
     }
   }
