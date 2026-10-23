@@ -214,6 +214,7 @@ export class UI {
       ['set-autoaim', 'autoAim'],
       ['set-shake', 'shake'],
       ['set-fps', 'showFps'],
+      ['set-quality', 'quality'],
     ];
     for (const [id, key] of toggles) {
       const input = el(id);
@@ -930,6 +931,7 @@ export class UI {
     el('set-autoaim').checked = !!s.autoAim;
     el('set-shake').checked = !!s.shake;
     el('set-fps').checked = !!s.showFps;
+    el('set-quality').checked = s.quality !== false;
     el('fps').classList.toggle('hidden', !s.showFps);
   }
 

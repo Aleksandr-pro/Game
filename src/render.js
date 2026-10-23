@@ -1,7 +1,7 @@
 // Рендерер: арена, бойцы, снаряды, эффекты, прицеливание.
 import { BRAWLER_BY_ID, TEAM_COLORS, TILE } from './config.js';
 import { WALL, CRATE, WATER, BUSH } from './maps.js';
-import { ARENA_STYLE, paintArena, drawWaterLife, drawAmbient, drawDecals } from './art.js';
+import { ARENA_STYLE, paintArena, drawWaterLife, drawAmbient, drawDecals, drawCrate, drawBush } from './art.js';
 import {
   TAU,
   clamp,
@@ -48,10 +48,13 @@ function diamond(ctx, cx, cy, w, h) {
   ctx.closePath();
 }
 
+// 32-битный хеш координат. Важно: только целочисленная арифметика (Math.imul),
+// иначе произведение выходит за точность double и хеш вырождается в пару значений.
 function hash2(x, y) {
-  let h = (x * 374761393 + y * 668265263) | 0;
-  h = (h ^ (h >> 13)) * 1274126177;
-  return ((h ^ (h >> 16)) >>> 0) / 4294967295;
+  let h = (Math.imul(x | 0, 374761393) + Math.imul(y | 0, 668265263)) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
 }
 
 export class Renderer {
@@ -81,9 +84,11 @@ export class Renderer {
   // Арена рисуется процедурно в src/art.js и кэшируется: на кадр остаётся
   // только drawImage видимой части.
   buildBackground(map, version = 0) {
-    const key = `${map.id}:v${version}`;
+    // Ящики рисуются отдельно, поэтому состояние карты на фон не влияет:
+    // фон перерисовывается только при смене арены (без рывков при разрушении).
+    const key = `${map.id}:static`;
     if (this.bgCache.has(key)) return this.bgCache.get(key);
-    const canvas = paintArena(map, version);
+    const canvas = paintArena(map, 0);
     this.bgCache.set(key, canvas);
     if (this.bgCache.size > 6) {
       const first = this.bgCache.keys().next().value;
@@ -171,15 +176,20 @@ export class Renderer {
     else ctx.drawImage(bg, 0, 0);
 
     const style = ARENA_STYLE[game.map.id] || ARENA_STYLE.mine;
+    // Режим «производительность»: отключаем только декор, геймплей и читаемость — нет.
+    this.hiQuality = game.settings.quality !== false;
 
     // Живая вода
-    if (game.map.theme.water) drawWaterLife(ctx, game.map, view, this.t, style);
+    if (this.hiQuality && game.map.theme.water) drawWaterLife(ctx, game.map, view, this.t, style);
 
     // Пылинки/снег/искры над ареной
-    drawAmbient(ctx, game, view, this.t);
+    if (this.hiQuality) drawAmbient(ctx, game, view, this.t);
 
     // Следы взрывов
-    drawDecals(ctx, game, view);
+    if (this.hiQuality) drawDecals(ctx, game, view);
+
+    // Ящики (динамические — их можно сломать)
+    this.drawCrates(ctx, game, view);
 
     // Ворота
     if (game.mode === 'brawlball') this.drawGoals(ctx, game);
@@ -204,7 +214,7 @@ export class Renderer {
 
     // Мягкие тени бойцов
     for (const p of game.players) {
-      if (!p.alive) continue;
+      if (!p.alive || !this.hiQuality) continue;
       this.softShadow(ctx, p.x, p.y + p.radius * 0.74, p.radius * 1.16, p.radius * 0.52, 0.4, 1 - (p.z || 0) / 200);
     }
 
@@ -234,6 +244,22 @@ export class Renderer {
     this.drawAimCursor(ctx, game, cam);
   }
 
+  drawCrates(ctx, game, view) {
+    const map = game.map;
+    const tile = TILE;
+    for (let y = 0; y < map.height; y++) {
+      const py = y * tile;
+      if (py + tile < view.y - 20 || py > view.y + view.h + 20) continue;
+      for (let x = 0; x < map.width; x++) {
+        if (map.grid[y][x] !== CRATE) continue;
+        const px = x * tile;
+        if (px + tile < view.x - 20 || px > view.x + view.w + 20) continue;
+        // вариант рисунка фиксирован координатой — без мерцания
+        drawCrate(ctx, px, py, map.theme, ((x * 7 + y * 13) % 2));
+      }
+    }
+  }
+
   // Мягкая тень-эллипс с растушёвкой
   softShadow(ctx, x, y, rx, ry, alpha = 0.35, scale = 1) {
     const g = ctx.createRadialGradient(x, y, 0, x, y, Math.max(rx, ry));
@@ -251,104 +277,15 @@ export class Renderer {
   }
 
   drawBushes(ctx, game, view) {
-    const theme = game.map.theme;
     const map = game.map;
     for (let y = 0; y < map.height; y++) {
+      const py = y * TILE;
+      if (py + TILE < view.y - 90 || py > view.y + view.h + 90) continue;
       for (let x = 0; x < map.width; x++) {
         if (map.grid[y][x] !== BUSH) continue;
         const px = x * TILE;
-        const py = y * TILE;
         if (px + TILE < view.x - 90 || px > view.x + view.w + 90) continue;
-        if (py + TILE < view.y - 90 || py > view.y + view.h + 90) continue;
-
-        const seed = hash2(x, y);
-        const sway = Math.sin(this.t * 1.7 + x * 0.7 + y * 0.4);
-        const t = this.t;
-
-        // тень под кустом
-        ctx.fillStyle = 'rgba(0,0,0,0.3)';
-        ctx.beginPath();
-        ctx.ellipse(px + 40, py + 74, 40, 14, 0, 0, TAU);
-        ctx.fill();
-
-        // тёмная подложка, чтобы куст читался на любом фоне
-        ctx.fillStyle = shade(theme.bush2, -0.32);
-        ctx.beginPath();
-        ctx.ellipse(px + 40, py + 50, 40, 32, 0, 0, TAU);
-        ctx.fill();
-
-        // объёмные листья: несколько слоёв
-        const lobes = [
-          [20, 58, 22, 0.2],
-          [58, 60, 23, 0.8],
-          [38, 40, 27, 0.4],
-          [15, 34, 17, 1.1],
-          [63, 33, 18, 1.6],
-          [41, 66, 19, 0.6],
-          [30, 24, 13, 2.1],
-          [52, 22, 12, 2.6],
-        ];
-        for (let i = 0; i < lobes.length; i++) {
-          const [bx, by, br, ph] = lobes[i];
-          const sx = Math.sin(t * 1.6 + ph + seed * 4) * (2.4 + by * 0.02);
-          const sy = Math.cos(t * 1.3 + ph) * 0.8;
-          const tone = i % 3 === 0 ? theme.bush3 : i % 3 === 1 ? theme.bush2 : theme.bush;
-          const g = ctx.createRadialGradient(
-            px + bx + sx - br * 0.35, py + by + sy - br * 0.45, br * 0.15,
-            px + bx + sx, py + by + sy, br * 1.12
-          );
-          g.addColorStop(0, shade(tone, 0.18));
-          g.addColorStop(0.55, tone);
-          g.addColorStop(1, shade(tone, -0.34));
-          ctx.fillStyle = g;
-          ctx.beginPath();
-          ctx.arc(px + bx + sx, py + by + sy, br, 0, TAU);
-          ctx.fill();
-        }
-
-        // освещённые верхушки
-        ctx.fillStyle = 'rgba(190,255,205,0.2)';
-        for (const [bx, by, br] of [[30, 22, 7], [50, 18, 6], [16, 30, 5]]) {
-          ctx.beginPath();
-          ctx.arc(px + bx + sway * 1.2, py + by, br, 0, TAU);
-          ctx.fill();
-        }
-
-        // прожилки листвы
-        ctx.strokeStyle = 'rgba(10,40,26,0.22)';
-        ctx.lineWidth = 1.6;
-        for (let i = 0; i < 4; i++) {
-          const a = -1.9 + i * 0.55;
-          ctx.beginPath();
-          ctx.moveTo(px + 40 + Math.cos(a) * 6, py + 46 + Math.sin(a) * 5);
-          ctx.quadraticCurveTo(
-            px + 40 + Math.cos(a) * 18 + sway, py + 46 + Math.sin(a) * 16,
-            px + 40 + Math.cos(a) * 28 + sway * 1.4, py + 46 + Math.sin(a) * 26
-          );
-          ctx.stroke();
-        }
-
-        // контур
-        ctx.strokeStyle = 'rgba(8,26,20,0.28)';
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(px + 40, py + 50, 42, 34, 0, 0, TAU);
-        ctx.stroke();
-
-        // светлячки внутри куста
-        for (let i = 0; i < 3; i++) {
-          const a = t * 0.6 + i * 2.1 + x * 0.6;
-          const gx = px + 38 + Math.cos(a) * (16 + i * 5);
-          const gy = py + 42 + Math.sin(a * 1.3) * (12 + i * 4);
-          const spark = 0.35 + Math.sin(t * 3 + i * 2) * 0.3;
-          const gg = ctx.createRadialGradient(gx, gy, 0, gx, gy, 9);
-          gg.addColorStop(0, `rgba(220,255,190,${spark})`);
-          gg.addColorStop(1, 'rgba(220,255,190,0)');
-          ctx.fillStyle = gg;
-          ctx.beginPath();
-          ctx.arc(gx, gy, 9, 0, TAU);
-          ctx.fill();
-        }
+        drawBush(ctx, px, py, map.theme, x * 3 + y * 5, this.t);
       }
     }
   }
@@ -757,7 +694,7 @@ export class Renderer {
     }
 
     // Тень на земле (отдельно от z)
-    if (!p.portrait) {
+    if (!p.portrait && this.hiQuality !== false) {
       this.softShadow(ctx, p.x, p.y + r * 0.78, r * 1.05, r * 0.46, 0.42, 1 - clamp((p.z || 0) / 260, 0, 0.7));
     }
 

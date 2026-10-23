@@ -1,5 +1,5 @@
 // Сгенерировано scripts/build-sw.js — не редактировать вручную.
-const VERSION = 'brawl-arena-a282690af7';
+const VERSION = 'brawl-arena-ec0acd7d2f';
 const CORE = [
   "./",
   "./index.html",
@@ -17,6 +17,7 @@ const CORE = [
   "./src/utils.js",
   "./src/pathfinding.js",
   "./src/art.js",
+  "./src/textures.js",
   "./src/updater.js",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

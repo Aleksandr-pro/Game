@@ -27,8 +27,10 @@ const result = await esbuild.build({
 });
 
 let js = result.outputFiles[0].text;
-// безопасно встраиваем в <script>
+// безопасно встраиваем в <script>: закрывающий тег и HTML-комментарии не должны
+// разрывать разметку
 js = js.replace(/<\/script/gi, '<\\/script');
+js = js.replace(/<!--/g, '<\\!--');
 
 const css = fs.readFileSync(path.join(root, 'styles.css'), 'utf8');
 let html = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -46,14 +48,11 @@ if (html.includes('src/main.js')) {
   throw new Error('Не удалось вырезать подключение модуля из index.html');
 }
 
-html = html.replace(
-  '</head>',
-  `  <style>\n${css}\n  </style>\n</head>`
-);
-html = html.replace(
-  '</body>',
-  `  <script>\n${js}\n  </script>\n</body>`
-);
+// ВАЖНО: подставляем через функцию-заменитель. В строке-заменителе символы
+// $&, $`, $' и $$ имеют особый смысл — минифицированный код с переменной `$`
+// (например `$&x`) иначе вклеивает куски HTML прямо в середину скрипта.
+html = html.replace('</head>', () => `  <style>\n${css}\n  </style>\n</head>`);
+html = html.replace('</body>', () => `  <script>\n${js}\n  </script>\n</body>`);
 
 // офлайн-файл не должен пытаться ставить service worker (нет http) — код уже проверяет протокол
 
