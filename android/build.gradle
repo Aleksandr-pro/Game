@@ -1,0 +1,5 @@
+// Корневой build-файл Android-приложения.
+// Приложение — это WebView-оболочка вокруг офлайн-сборки игры (release/BrawlArena.html).
+plugins {
+    id 'com.android.application' version '8.5.2' apply false
+}

@@ -1,0 +1,178 @@
+name: Android APK
+
+# Собирает APK игры и публикует его в релизе «android-latest».
+# Ссылка на скачивание не меняется между версиями:
+#   https://github.com/Aleksandr-pro/Game/releases/download/android-latest/BrawlArena.apk
+# Внутри приложения есть проверка обновлений (см. src/updater.js).
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'index.html'
+      - 'styles.css'
+      - 'icons/**'
+      - 'release/**'
+      - 'android/**'
+      - 'scripts/build-single.js'
+      - 'scripts/build-sw.js'
+      - 'package.json'
+      - '.github/workflows/android.yml'
+  pull_request:
+    paths:
+      - 'android/**'
+      - 'src/**'
+      - '.github/workflows/android.yml'
+  workflow_dispatch:
+    inputs:
+      version_name:
+        description: 'Версия (например 1.2.0). По умолчанию из package.json'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Сборка APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Код
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          packages: 'platforms;android-34 build-tools;34.0.0 platform-tools'
+          log-accepted-android-sdk-licenses: true
+
+      - name: Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Офлайн-сборка игры (один HTML)
+        run: |
+          npm install --no-save --no-audit --no-fund esbuild
+          node scripts/build-sw.js
+          node scripts/build-single.js
+
+      - name: Номер сборки и версия
+        id: ver
+        run: |
+          CODE=$(git rev-list --count HEAD)
+          NAME="${{ github.event.inputs.version_name }}"
+          if [ -z "$NAME" ]; then
+            NAME=$(node -p "require('./package.json').version")
+          fi
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+          echo "name=$NAME" >> "$GITHUB_OUTPUT"
+          echo "Сборка: v$NAME (versionCode $CODE)"
+
+      - name: Сборка APK
+        working-directory: android
+        run: |
+          gradle assembleRelease --no-daemon --stacktrace \
+            -PversionCode=${{ steps.ver.outputs.code }} \
+            -PversionName=${{ steps.ver.outputs.name }}
+
+      - name: Проверка подписи APK
+        run: |
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          echo "APK: $APK"
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/apksigner" verify --print-certs "$APK" | head -12
+          "$BT/aapt" dump badging "$APK" | grep -E "package:|application-label|launchable" | head -5
+
+      - name: Подготовка файлов релиза
+        run: |
+          mkdir -p dist
+          APK=$(find android/app/build/outputs/apk/release -name '*.apk' | head -1)
+          cp "$APK" dist/BrawlArena.apk
+          SHA=$(sha256sum dist/BrawlArena.apk | cut -d' ' -f1)
+          SIZE=$(stat -c%s dist/BrawlArena.apk)
+          cat > dist/update.json <<EOF
+          {
+            "versionCode": ${{ steps.ver.outputs.code }},
+            "versionName": "${{ steps.ver.outputs.name }}",
+            "apkUrl": "https://github.com/${{ github.repository }}/releases/download/android-latest/BrawlArena.apk",
+            "sha256": "$SHA",
+            "size": $SIZE,
+            "builtAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "commit": "${{ github.sha }}"
+          }
+          EOF
+          echo "APK_SHA=$SHA" >> "$GITHUB_ENV"
+          echo "$SHA  BrawlArena.apk" > dist/SHA256SUMS.txt
+          cat dist/update.json
+          cp dist/BrawlArena.apk "dist/BrawlArena-${{ steps.ver.outputs.name }}-${{ steps.ver.outputs.code }}.apk"
+
+      - name: Артефакт сборки
+        uses: actions/upload-artifact@v4
+        with:
+          name: BrawlArena-apk-${{ steps.ver.outputs.code }}
+          path: dist/*
+          if-no-files-found: error
+          retention-days: 30
+
+      # Релиз обновляется на каждом пуше в main: ссылка на APK остаётся постоянной,
+      # а приложение видит новую версию через update.json.
+      - name: Публикация релиза
+        if: github.event_name != 'pull_request'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: android-latest
+          name: Brawl Arena — Android (последняя версия)
+          body: |
+            ## Brawl Arena для Android
+
+            **Версия:** v${{ steps.ver.outputs.name }} (сборка ${{ steps.ver.outputs.code }})
+            **Коммит:** `${{ github.sha }}`
+
+            ### Как установить
+            1. Скачайте **BrawlArena.apk** ниже.
+            2. Откройте файл и разрешите установку из этого источника.
+            3. Играйте — интернет не нужен, игра полностью офлайн.
+
+            ### Как обновляться
+            Скачайте новый APK из этого же релиза и установите поверх старого —
+            прогресс и настройки сохранятся. Внутри игры: 💾 → «Проверить обновления».
+
+            ```text
+            SHA-256: ${{ env.APK_SHA }}
+            ```
+          files: |
+            dist/BrawlArena.apk
+            dist/update.json
+            dist/SHA256SUMS.txt
+          fail_on_unmatched_files: true
+          make_latest: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Итог
+        run: |
+          echo "### 📦 APK готов" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- версия: **v${{ steps.ver.outputs.name }}** (versionCode ${{ steps.ver.outputs.code }})" >> "$GITHUB_STEP_SUMMARY"
+          echo "- скачать: https://github.com/${{ github.repository }}/releases/download/android-latest/BrawlArena.apk" >> "$GITHUB_STEP_SUMMARY"

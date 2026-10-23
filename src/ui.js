@@ -12,6 +12,16 @@ import {
 import { getMapForMode, WALL, CRATE, BUSH, WATER } from './maps.js';
 import { drawPortrait } from './render.js';
 import { clamp } from './utils.js';
+import {
+  APK_URL,
+  APP_VERSION,
+  RELEASES_PAGE,
+  checkForUpdate,
+  formatSize,
+  getCurrentVersion,
+  installApk,
+  isAndroidApp,
+} from './updater.js';
 
 const GADGET_ICONS = {
   dash: '💨',
@@ -360,6 +370,117 @@ export class UI {
   openDownload() {
     el('screen-download').classList.remove('hidden');
     if (this.onDownloadReady) this.onDownloadReady();
+  }
+
+  // ---------- Обновления ----------
+  initUpdater() {
+    this.currentVersion = getCurrentVersion();
+    this.latestApkUrl = APK_URL;
+    const chip = el('app-version');
+    if (chip) {
+      const v = this.currentVersion;
+      chip.textContent = v.platform === 'android' ? `v${v.name} · ${v.code}` : `v${APP_VERSION} · веб`;
+      chip.title = v.platform === 'android' ? `Сборка ${v.code}` : 'Игра открыта в браузере — APK доступен в окне скачивания';
+      chip.addEventListener('click', () => {
+        this.audio.play('click');
+        this.openDownload();
+        this.runUpdateCheck(true);
+      });
+    }
+    const dl = el('apk-download');
+    if (dl) {
+      dl.addEventListener('click', (e) => {
+        e.preventDefault();
+        this.audio.play('click');
+        installApk(this.latestApkUrl || APK_URL);
+        this.toast(isAndroidApp() ? 'Загрузка APK — подтвердите установку' : 'Скачивание APK…');
+      });
+    }
+    const check = el('check-update');
+    if (check) {
+      check.addEventListener('click', () => {
+        this.audio.play('click');
+        this.runUpdateCheck(true);
+      });
+    }
+    if (isAndroidApp()) {
+      setTimeout(() => this.runUpdateCheck(false), 2600);
+    }
+  }
+
+  setApkStatus(text, kind = '') {
+    const status = el('apk-status');
+    if (!status) return;
+    status.className = `dl-note ${kind}`.trim();
+    status.textContent = text;
+  }
+
+  async runUpdateCheck(force = false) {
+    const btn = el('check-update');
+    if (btn && btn.dataset.busy !== '1') {
+      btn.dataset.busy = '1';
+      btn.disabled = true;
+      const prev = btn.textContent;
+      btn.textContent = 'Проверяю…';
+      this.setApkStatus('Соединяюсь с GitHub…');
+      try {
+        const res = await checkForUpdate(force);
+        this.applyUpdateResult(res);
+      } finally {
+        btn.disabled = false;
+        btn.dataset.busy = '0';
+        if (!this.updateAvailable) btn.textContent = prev;
+      }
+    }
+  }
+
+  applyUpdateResult(res) {
+    const btn = el('check-update');
+    const chip = el('app-version');
+    const cur = res.current || this.currentVersion;
+    const latest = res.latest;
+    if (latest && latest.apkUrl) this.latestApkUrl = latest.apkUrl;
+    this.updateAvailable = !!res.available;
+
+    if (!res.ok) {
+      this.setApkStatus('Не удалось проверить обновления — нет связи', 'err');
+      if (btn) btn.textContent = 'Повторить проверку';
+      return;
+    }
+
+    const build = latest ? `v${latest.versionName || '?'} (${latest.versionCode})` : '';
+
+    if (cur.platform !== 'android') {
+      if (latest) {
+        this.setApkStatus(`В релизе: ${build}${latest.size ? ' · ' + formatSize(latest.size) : ''}`);
+        if (btn) btn.textContent = 'Скачать APK';
+      } else {
+        this.setApkStatus('Последняя сборка · Android 6.0+');
+      }
+      return;
+    }
+
+    if (res.available) {
+      this.setApkStatus(`Доступно обновление: ${build} · у вас v${cur.name} (${cur.code})`, 'warn');
+      if (btn) {
+        btn.textContent = `Обновить до v${latest?.versionName || ''}`;
+        btn.onclick = (e) => {
+          e.preventDefault();
+          this.audio.play('click');
+          installApk(this.latestApkUrl);
+          this.toast('Загрузка обновления…');
+        };
+      }
+      if (chip) chip.classList.add('update');
+      this.toast(`Вышло обновление ${build} — откройте 💾 → «Обновить»`);
+    } else {
+      this.setApkStatus(`У вас последняя версия · v${cur.name} (${cur.code})`, 'ok');
+      if (btn) {
+        btn.textContent = 'Проверить обновления';
+        btn.onclick = null;
+      }
+      if (chip) chip.classList.remove('update');
+    }
   }
 
   // ---------- Бравлеры ----------

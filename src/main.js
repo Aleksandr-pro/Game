@@ -88,6 +88,7 @@ const ui = new UI({
 });
 ui.onDownloadReady = () => refreshInstallUI();
 ui.setInput(input);
+ui.initUpdater();
 
 audio.setSfxVolume(save.settings.sfx);
 audio.setMusicVolume(save.settings.music);
@@ -195,6 +196,24 @@ window.addEventListener('orientationchange', () => setTimeout(() => renderer.res
 document.addEventListener('visibilitychange', () => {
   if (document.hidden && game && !gameOver && !paused) togglePause(true);
 });
+
+// Системная кнопка «Назад» в Android-приложении = пауза
+window.__androidBack = () => {
+  const pause = document.getElementById('screen-pause');
+  if (pause && !pause.classList.contains('hidden')) {
+    if (typeof togglePause === 'function') togglePause(false);
+    return;
+  }
+  const overlays = ['screen-settings', 'screen-help', 'screen-download', 'screen-brawlers', 'screen-result'];
+  for (const id of overlays) {
+    const node = document.getElementById(id);
+    if (node && !node.classList.contains('hidden')) {
+      node.classList.add('hidden');
+      return;
+    }
+  }
+  if (game && !gameOver) togglePause(true);
+};
 
 // Быстрый запуск из ярлыка (?quick=1)
 window.addEventListener('load', () => {
