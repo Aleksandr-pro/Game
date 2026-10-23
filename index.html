@@ -2,397 +2,85 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
-  <meta name="theme-color" content="#0a0e18" />
-  <meta name="description" content="Brawl Arena — динамичный аркадный шутер 3 на 3 прямо в браузере. 9 бравлеров, 3 режима, умные боты. Работает офлайн." />
-  <title>Brawl Arena — 3 на 3</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f4f6f2" />
+  <meta name="description" content="Sana — персональные занятия математикой каждый день. Диагностика, индивидуальная программа, курсы и тесты с понятными объяснениями." />
+  <title>Sana — математика каждый день</title>
   <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
   <link rel="icon" href="icons/favicon-64.png" type="image/png" />
   <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="apple-mobile-web-app-title" content="Brawl Arena" />
-  <meta name="application-name" content="Brawl Arena" />
-  <meta property="og:title" content="Brawl Arena — бой 3 на 3" />
-  <meta property="og:description" content="Аркадный шутер 3 на 3 в браузере: 9 бравлеров, 3 режима, умные боты. Устанавливается как приложение и работает офлайн." />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Sana" />
+  <meta name="application-name" content="Sana" />
+  <meta property="og:title" content="Sana — математика каждый день" />
+  <meta property="og:description" content="Диагностика знаний, личная программа и короткие ежедневные занятия математикой." />
   <meta property="og:type" content="website" />
   <meta property="og:image" content="icons/icon-512.png" />
 </head>
 <body>
-  <div id="app">
-    <canvas id="game"></canvas>
+  <div id="app" class="app-shell">
+    <aside class="sidebar" aria-label="Основная навигация">
+      <a class="brand" href="#home" data-route="home" aria-label="Sana — на главную">
+        <span class="brand-mark" id="sidebar-brand-mark"></span>
+        <span class="brand-copy"><strong>sana</strong><small>математика каждый день</small></span>
+      </a>
 
-    <!-- ============ HUD ============ -->
-    <div id="hud" class="hidden">
-      <div class="hud-top">
-        <div class="team-score blue" id="team-score-0">
-          <span class="team-name">Синие</span>
-          <span class="team-count" id="score-0">0</span>
-          <span class="team-dots" id="dots-0"></span>
-        </div>
-        <div class="hud-center">
-          <div class="hud-mode" id="hud-mode">Захват кристаллов</div>
-          <div class="hud-timer" id="hud-timer">2:30</div>
-          <div class="hold-bar hidden" id="hold-bar">
-            <div class="hold-fill" id="hold-fill"></div>
-            <span class="hold-label" id="hold-label"></span>
-          </div>
-          <div class="hud-sub" id="hud-sub"></div>
-        </div>
-        <div class="team-score red" id="team-score-1">
-          <span class="team-name">Красные</span>
-          <span class="team-count" id="score-1">0</span>
-          <span class="team-dots" id="dots-1"></span>
-        </div>
+      <nav class="side-nav">
+        <span class="nav-caption">ОБУЧЕНИЕ</span>
+        <a href="#home" class="nav-item" data-route="home"><span data-icon="home"></span><span>Главная</span></a>
+        <a href="#courses" class="nav-item" data-route="courses"><span data-icon="book"></span><span>Мои курсы</span></a>
+        <a href="#tests" class="nav-item" data-route="tests"><span data-icon="clipboard"></span><span>Тесты</span><span class="nav-badge">7</span></a>
+        <a href="#progress" class="nav-item" data-route="progress"><span data-icon="chart"></span><span>Прогресс</span></a>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+      <div class="level-card" id="level-card"></div>
+      <button class="install-card" type="button" data-action="install-app">
+        <span class="install-card-icon" data-icon="download"></span>
+        <span><strong>Установить Sana</strong><small>Заниматься ещё удобнее</small></span>
+      </button>
+      <div class="sidebar-bottom">
+        <span class="status-dot"></span>
+        <span>Прогресс сохраняется автоматически</span>
       </div>
+    </aside>
 
-      <div class="hud-feed" id="hud-feed"></div>
-
-      <div class="hud-banner" id="hud-banner">
-        <div class="banner-text" id="banner-text"></div>
-        <div class="banner-sub" id="banner-sub"></div>
-      </div>
-
-      <button class="hud-pause" id="btn-pause" aria-label="Пауза">❚❚</button>
-
-      <div class="respawn hidden" id="respawn">
-        <div class="respawn-title">ВЫ ВЫБЫЛИ</div>
-        <div class="respawn-timer" id="respawn-timer">4</div>
-        <div class="respawn-hint">Возвращение в бой...</div>
-      </div>
-
-      <div class="scoreboard hidden" id="scoreboard">
-        <div class="sb-head">ТАБЛО МАТЧА <span class="sb-hint">Tab</span></div>
-        <div class="sb-teams" id="sb-teams"></div>
-      </div>
-
-      <div class="hud-bottom">
-        <div class="player-panel">
-          <div class="player-row">
-            <div class="player-avatar" id="hud-avatar">🔥</div>
-            <div class="player-bars">
-              <div class="hp-wrap">
-                <div class="hp-bar">
-                  <div class="shield-fill" id="shield-fill"></div>
-                  <div class="hp-fill" id="hp-fill"></div>
-                </div>
-                <span class="hp-text" id="hp-text">1600</span>
-              </div>
-              <div class="ammo" id="ammo-pips"></div>
-            </div>
-          </div>
-          <div class="player-name" id="hud-brawler-name">Блейз · Боец</div>
-        </div>
-
-        <div class="hints" id="hints">
-          <span><b>WASD</b> движение</span>
-          <span><b>ЛКМ</b> выстрел</span>
-          <span><b>ПКМ / Space</b> супер</span>
-          <span><b>Q</b> гаджет</span>
-          <span><b>Esc</b> пауза</span>
-        </div>
-
-        <div class="abilities">
-          <button class="ability gadget" id="btn-gadget" aria-label="Гаджет">
-            <span class="ability-icon" id="gadget-icon">💨</span>
-            <span class="ability-cd hidden" id="gadget-cd">0</span>
-            <span class="ability-key">Q</span>
-          </button>
-          <button class="ability super" id="btn-super" aria-label="Суперспособность">
-            <span class="super-ring" id="super-ring"></span>
-            <span class="super-inner">
-              <span class="super-pct" id="super-pct">0%</span>
-              <span class="super-label">СУПЕР</span>
-            </span>
-            <span class="ability-key">SPACE</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="rotate-hint" id="rotate-hint">
-        <div class="rotate-icon">📱</div>
-        <div>Поверните устройство горизонтально</div>
-      </div>
-    </div>
-
-    <!-- ============ ДОМ ============ -->
-    <section id="screen-home" class="screen">
-      <div class="backdrop-orbs">
-        <span class="orb o1"></span>
-        <span class="orb o2"></span>
-        <span class="orb o3"></span>
-      </div>
+    <div class="app-body">
       <header class="topbar">
-        <div class="logo">
-          <span class="logo-bolt">⚡</span>
-          <span class="logo-text">BRAWL<span>ARENA</span></span>
+        <div class="topbar-context">
+          <span class="context-eyebrow">ЛИЧНЫЙ КАБИНЕТ</span>
+          <span id="context-title">Мой день</span>
         </div>
-        <div class="profile">
-          <div class="profile-stat"><span class="ps-icon">🏆</span><span id="home-trophies">0</span><span class="ps-label">кубков</span></div>
-          <div class="profile-stat"><span class="ps-icon">🎯</span><span id="home-winrate">0%</span><span class="ps-label">побед</span></div>
-          <div class="profile-stat"><span class="ps-icon">🔥</span><span id="home-streak">0</span><span class="ps-label">серия</span></div>
-          <button class="icon-btn install-btn hidden" id="btn-install" title="Установить игру как приложение">⬇ <span>Установить</span></button>
-          <button class="icon-btn" id="btn-download" aria-label="Скачать игру" title="Скачать игру">💾</button>
-          <button class="icon-btn" id="btn-sound" aria-label="Звук">🔊</button>
+        <div class="topbar-actions">
+          <div class="streak-pill" id="header-streak" title="Дней подряд"></div>
+          <button class="icon-button notification-button" type="button" data-action="open-notifications" aria-label="Уведомления">
+            <span data-icon="bell"></span><span class="notification-dot" id="notification-dot"></span>
+          </button>
+          <a href="#profile" class="profile-link" data-route="profile" aria-label="Открыть профиль">
+            <span class="avatar" id="header-avatar">А</span>
+            <span class="profile-link-copy"><strong id="header-name">Али</strong><small id="header-grade">7 класс</small></span>
+            <span data-icon="chevron" class="profile-chevron"></span>
+          </a>
         </div>
       </header>
 
-      <main class="home-main">
-        <aside class="panel modes-panel">
-          <div class="panel-title"><span class="dot"></span>РЕЖИМ БОЯ</div>
-          <div class="mode-list" id="mode-list"></div>
-          <div class="panel-title small"><span class="dot"></span>СЛОЖНОСТЬ</div>
-          <div class="difficulty-row" id="difficulty-row"></div>
-          <div class="map-preview" id="map-preview"></div>
-        </aside>
+      <main id="main-content" class="main-content"></main>
+    </div>
 
-        <section class="hero">
-          <div class="hero-stage">
-            <div class="hero-rings"></div>
-            <canvas id="hero-canvas" width="420" height="420"></canvas>
-            <div class="hero-shadow"></div>
-            <div class="hero-badge" id="hero-rarity">Обычный</div>
-          </div>
-          <div class="hero-info">
-            <div class="hero-role" id="hero-role">Боец</div>
-            <h1 class="hero-name" id="hero-name">Блейз</h1>
-            <p class="hero-desc" id="hero-desc"></p>
-            <div class="hero-stats">
-              <div class="stat"><span class="stat-label">ЗДОРОВЬЕ</span><span class="stat-value" id="stat-hp">1600</span></div>
-              <div class="stat"><span class="stat-label">УРОН</span><span class="stat-value" id="stat-dmg">400</span></div>
-              <div class="stat"><span class="stat-label">ДАЛЬНОСТЬ</span><span class="stat-value" id="stat-range">Средняя</span></div>
-            </div>
-            <div class="hero-actions">
-              <button class="btn ghost" id="btn-change-brawler">Сменить бравлера</button>
-              <button class="btn ghost" id="btn-hero-help">Как играть</button>
-            </div>
-          </div>
-        </section>
-
-        <aside class="panel play-panel">
-          <div class="panel-title"><span class="dot"></span>БОЙ 3 × 3</div>
-          <div class="play-mode-name" id="play-mode-name">Захват кристаллов</div>
-          <div class="play-mode-rules" id="play-mode-rules">10 кристаллов · 15 секунд удержания</div>
-          <div class="play-mode-desc" id="play-mode-desc"></div>
-          <button class="btn primary play" id="btn-play">
-            <span class="play-glow"></span>
-            <span class="play-text">В БОЙ</span>
-            <span class="play-sub">против ботов</span>
-          </button>
-          <div class="play-footer">
-            <div class="mini-stat"><b id="home-matches">0</b><span>матчей</span></div>
-            <div class="mini-stat"><b id="home-wins">0</b><span>побед</span></div>
-            <div class="mini-stat"><b id="home-best">0</b><span>рекорд</span></div>
-          </div>
-          <button class="btn ghost wide" id="btn-settings">Настройки</button>
-        </aside>
-      </main>
-
-      <footer class="home-footer">
-        <button class="nav-btn" id="btn-brawlers"><span>🦾</span>Бравлеры</button>
-        <button class="nav-btn" id="btn-help"><span>📖</span>Как играть</button>
-        <button class="nav-btn" id="btn-download-2"><span>💾</span>Скачать игру</button>
-        <div class="foot-tip">Совет дня: <span id="tip-text">Используйте кусты для засады — враг не увидит вас, пока не подойдёт вплотную.</span></div>
-        <div class="foot-version" id="app-version" title="Версия игры">v—</div>
-      </footer>
-    </section>
-
-    <!-- ============ БРАВЛЕРЫ ============ -->
-    <section id="screen-brawlers" class="screen overlay hidden">
-      <div class="modal wide-modal">
-        <header class="modal-head">
-          <h2>Бравлеры <span class="muted">9 / 9 открыто</span></h2>
-          <button class="close-btn" data-close="brawlers">✕</button>
-        </header>
-        <div class="brawler-grid" id="brawler-grid"></div>
-        <div class="brawler-detail" id="brawler-detail"></div>
-      </div>
-    </section>
-
-    <!-- ============ НАСТРОЙКИ ============ -->
-    <section id="screen-settings" class="screen overlay hidden">
-      <div class="modal">
-        <header class="modal-head">
-          <h2>Настройки</h2>
-          <button class="close-btn" data-close="settings">✕</button>
-        </header>
-        <div class="settings-body">
-          <label class="setting">
-            <span>Громкость эффектов <b id="val-sfx">70%</b></span>
-            <input type="range" id="set-sfx" min="0" max="100" value="70" />
-          </label>
-          <label class="setting">
-            <span>Громкость музыки <b id="val-music">35%</b></span>
-            <input type="range" id="set-music" min="0" max="100" value="35" />
-          </label>
-          <label class="setting toggle-row">
-            <span>Помощь прицеливания</span>
-            <input type="checkbox" id="set-assist" checked />
-          </label>
-          <label class="setting toggle-row">
-            <span>Автоприцел на мобильных</span>
-            <input type="checkbox" id="set-autoaim" checked />
-          </label>
-          <label class="setting toggle-row">
-            <span>Тряска экрана</span>
-            <input type="checkbox" id="set-shake" checked />
-          </label>
-          <label class="setting toggle-row">
-            <span>Показывать FPS</span>
-            <input type="checkbox" id="set-fps" />
-          </label>
-          <label class="setting toggle-row">
-            <span>Качество графики <small>тени, частицы, текстуры</small></span>
-            <input type="checkbox" id="set-quality" checked />
-          </label>
-          <p class="settings-note">Управление: WASD / стрелки — движение, мышь — прицел, ЛКМ — выстрел, ПКМ или Space — супер, Q — гаджет, Esc — пауза. На телефоне: левый стик — движение, правый — прицел, отпустите — выстрел.</p>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ КАК ИГРАТЬ ============ -->
-    <section id="screen-help" class="screen overlay hidden">
-      <div class="modal wide-modal">
-        <header class="modal-head">
-          <h2>Как играть</h2>
-          <button class="close-btn" data-close="help">✕</button>
-        </header>
-        <div class="help-grid">
-          <div class="help-card">
-            <h3>⌨️ Управление на ПК</h3>
-            <ul class="key-list">
-              <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — движение</li>
-              <li><kbd>Мышь</kbd> — прицел, <kbd>ЛКМ</kbd> — выстрел</li>
-              <li><kbd>ПКМ</kbd> / <kbd>Space</kbd> — суперспособность</li>
-              <li><kbd>Q</kbd> — гаджет, <kbd>F</kbd> — быстрый выстрел</li>
-              <li><kbd>Esc</kbd> — пауза</li>
-            </ul>
-          </div>
-          <div class="help-card">
-            <h3>📱 Управление на телефоне</h3>
-            <ul class="key-list">
-              <li>Левый стик — движение</li>
-              <li>Правый стик — прицел, отпустите — выстрел</li>
-              <li>Короткий тап — выстрел с автоприцелом</li>
-              <li>Кнопки справа внизу — супер и гаджет</li>
-              <li>Лучше играть в горизонтальной ориентации</li>
-            </ul>
-          </div>
-          <div class="help-card">
-            <h3>🎯 Основы</h3>
-            <ul class="key-list">
-              <li>Стреляйте из укрытий и не стойте в открытом поле</li>
-              <li>Кусты скрывают вас от врагов, пока они не подойдут вплотную</li>
-              <li>Каждый удар заполняет шкалу супера</li>
-              <li>Гаджет — мощный приём на короткой перезарядке</li>
-              <li>Погибнув, вы теряете кристаллы — их подберёт враг</li>
-            </ul>
-          </div>
-          <div class="help-card">
-            <h3>🏆 Режимы</h3>
-            <ul class="key-list">
-              <li><b>Кристаллы</b> — соберите 10 и удержите 15 секунд</li>
-              <li><b>Бравл-бол</b> — забейте 2 гола, мяч отбирается касанием</li>
-              <li><b>Награда</b> — убивайте врагов и собирайте звёзды, до 20</li>
-            </ul>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ СКАЧАТЬ / УСТАНОВИТЬ ============ -->
-    <section id="screen-download" class="screen overlay hidden">
-      <div class="modal wide-modal">
-        <header class="modal-head">
-          <h2>Скачать игру</h2>
-          <button class="close-btn" data-close="download">✕</button>
-        </header>
-        <div class="download-grid">
-          <div class="dl-card">
-            <div class="dl-icon">📲</div>
-            <h3>Установить как приложение</h3>
-            <p>Игра появится на рабочем столе или в доке, запустится на весь экран и будет работать без интернета.</p>
-            <button class="btn primary" id="btn-install-2">Установить</button>
-            <div class="dl-note" id="install-hint"></div>
-          </div>
-          <div class="dl-card dl-apk">
-            <div class="dl-icon">📱</div>
-            <h3>Android APK</h3>
-            <p>Установите игру как обычное приложение. Новые версии приходят сюда же — просто скачайте APK поверх.</p>
-            <a class="btn primary" id="apk-download" href="https://github.com/Aleksandr-pro/Game/releases/download/android-latest/BrawlArena.apk">Скачать APK</a>
-            <button class="btn ghost" id="check-update">Проверить обновления</button>
-            <div class="dl-note" id="apk-status">Последняя сборка · Android 6.0+</div>
-          </div>
-
-          <div class="dl-card">
-            <div class="dl-icon">💾</div>
-            <h3>Один файл — вся игра</h3>
-            <p>Скачайте <b>BrawlArena.html</b> и открывайте двойным щелчком. Ничего устанавливать не нужно, интернет не требуется.</p>
-            <a class="btn primary" href="release/BrawlArena.html" download="BrawlArena.html">Скачать .html</a>
-            <div class="dl-note">Работает офлайн в любом современном браузере</div>
-          </div>
-          <div class="dl-card">
-            <div class="dl-icon">🗂️</div>
-            <h3>Исходники</h3>
-            <p>Полный код игры: движок, боты, рендерер. Запускается любым статическим сервером.</p>
-            <a class="btn ghost" href="https://github.com/Aleksandr-pro/Game/archive/refs/heads/main.zip" target="_blank" rel="noopener">Скачать .zip</a>
-            <div class="dl-note">Без сборки: <code>python3 -m http.server</code></div>
-          </div>
-        </div>
-        <div class="dl-tips">
-          <b>Как установить на телефоне:</b>
-          <span>Android / Chrome — меню «⋮» → «Установить приложение». iPhone / Safari — кнопка «Поделиться» → «На экран „Домой“».</span>
-        </div>
-      </div>
-    </section>
-
-    <!-- ============ ПАУЗА ============ -->
-    <section id="screen-pause" class="screen overlay hidden">
-      <div class="modal small-modal">
-        <header class="modal-head">
-          <h2>Пауза</h2>
-        </header>
-        <div class="pause-actions">
-          <button class="btn primary" id="btn-resume">Продолжить</button>
-          <button class="btn ghost" id="btn-pause-settings">Настройки</button>
-          <button class="btn ghost danger" id="btn-leave">Покинуть бой</button>
-        </div>
-        <p class="pause-note">Матч остановлен. Боты тоже ждут.</p>
-      </div>
-    </section>
-
-    <!-- ============ РЕЗУЛЬТАТ ============ -->
-    <section id="screen-result" class="screen overlay hidden">
-      <div class="result-card" id="result-card">
-        <div class="result-glow"></div>
-        <div class="result-badge" id="result-badge">🏆</div>
-        <h2 class="result-title" id="result-title">ПОБЕДА</h2>
-        <div class="result-score" id="result-score">2 : 1</div>
-        <div class="result-meta" id="result-meta">Стадион · Бравл-бол</div>
-        <div class="result-stats" id="result-stats"></div>
-        <div class="result-mvp" id="result-mvp"></div>
-        <div class="result-trophy" id="result-trophy">+10 🏆</div>
-        <div class="result-note" id="result-note"></div>
-        <div class="result-actions">
-          <button class="btn primary" id="btn-again">ЕЩЁ РАЗ</button>
-          <button class="btn ghost" id="btn-menu">В МЕНЮ</button>
-        </div>
-      </div>
-    </section>
-
-    <section id="screen-loading" class="screen overlay hidden">
-      <div class="loading-box">
-        <div class="loading-logo">⚡</div>
-        <div class="loading-text">Загрузка арены...</div>
-      </div>
-    </section>
-
-    <div id="fps" class="fps hidden">60 FPS</div>
-    <div id="toast" class="toast"></div>
+    <nav class="mobile-nav" aria-label="Мобильная навигация">
+      <a href="#home" data-route="home" class="mobile-nav-item"><span data-icon="home"></span><span>Главная</span></a>
+      <a href="#courses" data-route="courses" class="mobile-nav-item"><span data-icon="book"></span><span>Курсы</span></a>
+      <a href="#tests" data-route="tests" class="mobile-nav-item"><span data-icon="clipboard"></span><span>Тесты</span></a>
+      <a href="#progress" data-route="progress" class="mobile-nav-item"><span data-icon="chart"></span><span>Прогресс</span></a>
+      <a href="#profile" data-route="profile" class="mobile-nav-item"><span data-icon="user"></span><span>Профиль</span></a>
+    </nav>
   </div>
 
-  <script type="module" src="src/main.js"></script>
+  <div id="modal-root"></div>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="src/app.js"></script>
 </body>
 </html>

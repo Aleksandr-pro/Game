@@ -1,5 +1,4 @@
-// Корневой build-файл Android-приложения.
-// Приложение — это WebView-оболочка вокруг офлайн-сборки игры (release/BrawlArena.html).
+// Корневой build-файл Android-оболочки Sana.
 plugins {
     id 'com.android.application' version '8.5.2' apply false
 }

@@ -1,42 +1,31 @@
-import { MAPS, WALL, WATER, FLOOR } from '../src/maps.js';
-import { BRAWLERS } from '../src/config.js';
-let ok = true;
-for (const m of MAPS) {
-  console.log(`\n=== ${m.id} ${m.name} (${m.width}x${m.height}) ===`);
-  for (const row of m.grid) console.log(row.map(t => ['.','#','=','~','*'][t] ?? '.').join(''));
-  console.log('spawns', m.spawns[0].length, m.spawns[1].length, 'goals', !!m.goals[0], !!m.goals[1], 'crates', m.crateCount);
-  if (m.spawns[0].length !== 3 || m.spawns[1].length !== 3) { console.log('!! spawns != 3'); ok = false; }
-  for (const team of [0,1]) for (const s of m.spawns[team]) {
-    const tx = Math.floor(s.x/80), ty = Math.floor(s.y/80);
-    if (m.grid[ty][tx] !== FLOOR) { console.log('!! spawn blocked', team, tx, ty); ok = false; }
-  }
-  // симметрия
-  for (let y=0;y<m.height;y++) for (let x=0;x<m.width;x++) {
-    const a = m.grid[y][x], b = m.grid[y][m.width-1-x];
-    if (a !== b) { console.log('!! asym at', x, y, a, b); ok = false; }
-  }
-  // доступность центра от спавна (BFS)
-  const CH = ['.','#','=','~','*'];
-  const seen = new Set();
-  const q = [[Math.floor(m.spawns[0][0].x/80), Math.floor(m.spawns[0][0].y/80)]];
-  while (q.length) {
-    const [x,y] = q.pop(); const k = y*m.width+x;
-    if (seen.has(k)) continue; seen.add(k);
-    for (const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]) {
-      const nx=x+dx, ny=y+dy;
-      if (nx<0||ny<0||nx>=m.width||ny>=m.height) continue;
-      const t=m.grid[ny][nx];
-      if (t===WALL||t===WATER) continue;
-      const nk=ny*m.width+nx; if (!seen.has(nk)) q.push([nx,ny]);
-    }
-  }
-  const cx=Math.floor(m.width/2), cy=Math.floor(m.height/2);
-  if (!seen.has(cy*m.width+cx)) { console.log('!! center unreachable'); ok = false; }
-  if (m.goals[0] && !seen.has(Math.floor(m.goals[1].y/80+1)*m.width + Math.floor((m.goals[1].x+m.goals[1].w/2)/80))) {
-    console.log('!! enemy goal unreachable'); ok = false;
-  }
-  console.log('reachable tiles', seen.size, '/', m.width*m.height);
+import fs from 'node:fs';
+import assert from 'node:assert/strict';
+import { SKILLS, COURSES, DIAGNOSTIC_QUESTIONS, QUESTION_BANK } from '../src/data.js';
+
+const runtimeFiles = ['index.html', 'styles.css', 'src/app.js', 'src/data.js', 'src/icons.js', 'src/learning.js'];
+for (const file of runtimeFiles) {
+  const content = fs.readFileSync(file, 'utf8');
+  assert.ok(content.length > 100, `${file}: файл не должен быть пустым`);
+  assert.ok(!/Brawl Arena|brawl-arena/i.test(content), `${file}: остались данные старой игры`);
 }
-console.log('\nBrawlers:', BRAWLERS.length);
-console.log(ok ? '\nMAPS OK' : '\nMAPS FAIL');
-process.exit(ok?0:1);
+
+const questions = [...DIAGNOSTIC_QUESTIONS, ...QUESTION_BANK];
+assert.equal(new Set(questions.map((question) => question.id)).size, questions.length, 'ID заданий должны быть уникальны');
+for (const question of questions) {
+  assert.ok(SKILLS[question.skill], `${question.id}: неизвестный навык`);
+  assert.ok(question.prompt && question.answer && question.explanation && question.hint, `${question.id}: задание заполнено не полностью`);
+  if (question.options) assert.ok(question.options.includes(question.answer), `${question.id}: правильного ответа нет в вариантах`);
+}
+for (const course of COURSES) {
+  assert.ok(SKILLS[course.skill], `${course.id}: неизвестный навык курса`);
+  assert.ok(QUESTION_BANK.some((question) => question.skill === course.skill), `${course.id}: нет заданий`);
+}
+
+const manifest = JSON.parse(fs.readFileSync('manifest.webmanifest', 'utf8'));
+assert.equal(manifest.short_name, 'Sana');
+for (const item of manifest.icons) assert.ok(fs.existsSync(item.src), `Нет иконки ${item.src}`);
+const worker = fs.readFileSync('sw.js', 'utf8');
+for (const match of worker.matchAll(/'\.\/([^']+)'/g)) {
+  if (match[1]) assert.ok(fs.existsSync(match[1]), `SW: файл ${match[1]} не найден`);
+}
+console.log(`✓ Проверено: ${questions.length} заданий, ${COURSES.length} курсов, manifest и service worker`);
