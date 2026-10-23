@@ -1,60 +1,36 @@
 {
-  "name": "Brawl Arena — бой 3 на 3",
-  "short_name": "Brawl Arena",
-  "description": "Динамичный аркадный шутер 3 на 3: 9 бравлеров, 3 режима, умные боты. Работает офлайн.",
+  "name": "Sana — математика каждый день",
+  "short_name": "Sana",
+  "description": "Диагностика знаний, персональная программа, курсы и ежедневные занятия математикой.",
   "lang": "ru",
   "dir": "ltr",
-  "start_url": "./index.html",
+  "start_url": "./index.html#home",
   "scope": "./",
-  "id": "brawl-arena",
+  "id": "sana-math-learning",
   "display": "standalone",
-  "display_override": ["fullscreen", "standalone", "minimal-ui"],
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
   "orientation": "any",
-  "background_color": "#070a12",
-  "theme_color": "#0a0e18",
-  "categories": ["games", "entertainment"],
+  "background_color": "#f4f6f2",
+  "theme_color": "#236a52",
+  "categories": ["education", "productivity"],
   "icons": [
-    {
-      "src": "icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "icons/icon-maskable-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "docs/screenshots/arena.jpg",
-      "sizes": "1280x720",
-      "type": "image/jpeg",
-      "form_factor": "wide",
-      "label": "Бой на арене"
-    },
-    {
-      "src": "docs/screenshots/brawlball.jpg",
-      "sizes": "1280x720",
-      "type": "image/jpeg",
-      "form_factor": "wide",
-      "label": "Бравл-бол"
-    }
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
   ],
   "shortcuts": [
     {
-      "name": "Быстрый бой",
-      "short_name": "В бой",
-      "description": "Сразу начать матч",
-      "url": "./index.html?quick=1",
+      "name": "Занятие на сегодня",
+      "short_name": "Занятие",
+      "description": "Открыть персональный план на сегодня",
+      "url": "./index.html#home",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Пройти диагностику",
+      "short_name": "Диагностика",
+      "description": "Обновить персональную программу",
+      "url": "./index.html#diagnostic",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }]
     }
   ]

@@ -2,15 +2,9 @@ plugins {
     id 'com.android.application'
 }
 
-// ---------- Версия ----------
-// versionCode берётся из -PversionCode (в CI это число коммитов — всегда растёт),
-// versionName — из -PversionName (версия из package.json).
 def pVersionCode = (project.findProperty('versionCode') ?: '1').toString().toInteger()
 def pVersionName = (project.findProperty('versionName') ?: '1.0.0').toString()
 
-// ---------- Подпись ----------
-// Ключ лежит в репозитории, чтобы все сборки подписывались одинаково:
-// иначе Android не даст установить обновление поверх старой версии.
 def keystorePropsFile = rootProject.file('keystore.properties')
 def keystoreProps = new Properties()
 if (keystorePropsFile.exists()) {
@@ -19,11 +13,11 @@ if (keystorePropsFile.exists()) {
 def hasKeystore = keystorePropsFile.exists() && keystoreProps.getProperty('storeFile')
 
 android {
-    namespace 'com.brawlarena.game'
+    namespace 'com.sana.math'
     compileSdk 34
 
     defaultConfig {
-        applicationId 'com.brawlarena.game'
+        applicationId 'com.sana.math'
         minSdk 23
         targetSdk 34
         versionCode pVersionCode
@@ -56,31 +50,25 @@ android {
         }
     }
 
-    buildFeatures {
-        buildConfig true
-    }
-
+    buildFeatures { buildConfig true }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-
     lint {
         abortOnError false
         checkReleaseBuilds false
     }
 }
 
-// ---------- Игровые ассеты ----------
-// Перед сборкой подкладываем свежую офлайн-версию игры в assets.
-// Источник: release/BrawlArena.html (npm run build), fallback — соберём на месте.
+// Перед сборкой помещаем автономную версию Sana в assets WebView.
 def assetsDir = file("$projectDir/src/main/assets")
-def releaseHtml = rootProject.file('../release/BrawlArena.html')
+def releaseHtml = rootProject.file('../release/Sana.html')
 
-tasks.register('prepareGameAssets') {
+tasks.register('prepareSanaAssets') {
     doLast {
         if (!releaseHtml.exists()) {
-            throw new GradleException('Нет release/BrawlArena.html — сначала выполните npm run build')
+            throw new GradleException('Нет release/Sana.html — сначала выполните npm run build')
         }
         assetsDir.mkdirs()
         copy {
@@ -95,19 +83,18 @@ tasks.register('prepareGameAssets') {
             builtAt    : new Date().format("yyyy-MM-dd'T'HH:mm:ss'Z'", TimeZone.getTimeZone('UTC')),
         ]).toString()
         new File(assetsDir, 'version.json').text = json
-        logger.lifecycle("Игра упакована: v${pVersionName} (${pVersionCode})")
+        logger.lifecycle("Sana упакована: v${pVersionName} (${pVersionCode})")
     }
 }
 
-tasks.named('preBuild').configure { dependsOn 'prepareGameAssets' }
+tasks.named('preBuild').configure { dependsOn 'prepareSanaAssets' }
 
-// Понятное имя итогового файла
 tasks.register('renameApk') {
     doLast {
         def apkDir = file("$buildDir/outputs/apk/release")
         def apk = apkDir.listFiles()?.find { it.name.endsWith('.apk') && !it.name.contains('unsigned') }
         if (apk != null) {
-            def target = new File(apkDir, 'BrawlArena.apk')
+            def target = new File(apkDir, 'Sana.apk')
             if (target.exists()) target.delete()
             apk.renameTo(target)
             logger.lifecycle("APK: ${target.absolutePath}")
@@ -115,7 +102,6 @@ tasks.register('renameApk') {
     }
 }
 
-// Задачи вариантов появляются после оценки проекта, поэтому вешаем хук в afterEvaluate.
 afterEvaluate {
     tasks.matching { it.name == 'assembleRelease' }.configureEach {
         finalizedBy 'renameApk'
