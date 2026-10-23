@@ -390,10 +390,16 @@ export class UI {
     const dl = el('apk-download');
     if (dl) {
       dl.addEventListener('click', (e) => {
-        e.preventDefault();
         this.audio.play('click');
-        installApk(this.latestApkUrl || APK_URL);
-        this.toast(isAndroidApp() ? 'Загрузка APK — подтвердите установку' : 'Скачивание APK…');
+        if (isAndroidApp()) {
+          // в приложении скачиваем через мост и открываем установщик
+          e.preventDefault();
+          installApk(this.latestApkUrl || APK_URL);
+          this.toast('Загрузка APK — подтвердите установку');
+        } else {
+          // в браузере обычная ссылка: без popup-блокировок и лишних окон
+          this.toast('Скачивание APK…');
+        }
       });
     }
     const check = el('check-update');

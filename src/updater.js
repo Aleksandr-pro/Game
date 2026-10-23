@@ -220,7 +220,8 @@ export function installApk(url = APK_URL) {
       return 'android';
     }
   } catch (_) {}
-  window.open(url, '_blank', 'noopener');
+  const opened = window.open(url, '_blank', 'noopener');
+  if (!opened) window.location.href = url;
   return 'browser';
 }
 

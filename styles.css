@@ -1284,6 +1284,7 @@ body.touch .hud-bottom { padding-bottom: max(10px, env(safe-area-inset-bottom));
 .dl-card.dl-apk { border-color: rgba(79, 224, 138, 0.28); box-shadow: 0 0 0 1px rgba(79, 224, 138, 0.08) inset; }
 .dl-card.dl-apk .dl-icon { filter: drop-shadow(0 4px 12px rgba(79, 224, 138, 0.35)); }
 .dl-card .btn + .btn { margin-top: 6px; }
+.dl-card .btn { width: 100%; text-align: center; }
 .dl-note.ok { color: #7dffb0; }
 .dl-note.warn { color: #ffd166; }
 .dl-note.err { color: #ff9ab0; }
