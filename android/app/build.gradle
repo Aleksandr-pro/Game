@@ -115,4 +115,9 @@ tasks.register('renameApk') {
     }
 }
 
-tasks.named('assembleRelease').configure { finalizedBy 'renameApk' }
+// Задачи вариантов появляются после оценки проекта, поэтому вешаем хук в afterEvaluate.
+afterEvaluate {
+    tasks.matching { it.name == 'assembleRelease' }.configureEach {
+        finalizedBy 'renameApk'
+    }
+}
