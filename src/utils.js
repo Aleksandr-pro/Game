@@ -108,8 +108,16 @@ export function shade(hex, amount) {
   return `rgb(${r},${g},${b})`;
 }
 
-export function withAlpha(hex, a) {
-  const n = parseInt(hex.slice(1), 16);
+export function withAlpha(color, a) {
+  // принимает и #rgb/#rrggbb, и rgb(...) — на случай затемнённых оттенков
+  if (typeof color === 'string' && color.startsWith('rgb')) {
+    const nums = color.replace(/[^0-9.,]/g, ' ').trim().split(/[\s,]+/);
+    const r = Math.round(Number(nums[0]) || 0);
+    const g = Math.round(Number(nums[1]) || 0);
+    const b = Math.round(Number(nums[2]) || 0);
+    return `rgba(${r},${g},${b},${a})`;
+  }
+  const n = parseInt(String(color).slice(1), 16);
   return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
 }
 
