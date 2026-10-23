@@ -92,9 +92,22 @@ jobs:
       - name: Сборка APK
         working-directory: android
         run: |
+          set -o pipefail
           gradle assembleRelease --no-daemon --stacktrace \
             -PversionCode=${{ steps.ver.outputs.code }} \
-            -PversionName=${{ steps.ver.outputs.name }}
+            -PversionName=${{ steps.ver.outputs.name }} 2>&1 | tee /tmp/gradle-build.log
+
+      # Если сборка упала — короткий хвост лога уходит комментарием в PR,
+      # чтобы причину было видно без скачивания архива логов.
+      - name: Диагностика сборочной ошибки
+        if: failure() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          if [ ! -f /tmp/gradle-build.log ]; then echo "лога нет" >&2; exit 0; fi
+          { echo '```text'; tail -60 /tmp/gradle-build.log; echo '```'; } > /tmp/comment.md
+          gh pr comment "$PR" --body-file /tmp/comment.md || true
 
       - name: Проверка подписи APK
         run: |
