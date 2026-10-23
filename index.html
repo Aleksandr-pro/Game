@@ -4,10 +4,21 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
   <meta name="theme-color" content="#0a0e18" />
-  <meta name="description" content="Brawl Arena — динамичный аркадный шутер 3 на 3 прямо в браузере." />
+  <meta name="description" content="Brawl Arena — динамичный аркадный шутер 3 на 3 прямо в браузере. 9 бравлеров, 3 режима, умные боты. Работает офлайн." />
   <title>Brawl Arena — 3 на 3</title>
+  <link rel="manifest" href="manifest.webmanifest" />
   <link rel="stylesheet" href="styles.css" />
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚡</text></svg>" />
+  <link rel="icon" href="icons/favicon-64.png" type="image/png" />
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Brawl Arena" />
+  <meta name="application-name" content="Brawl Arena" />
+  <meta property="og:title" content="Brawl Arena — бой 3 на 3" />
+  <meta property="og:description" content="Аркадный шутер 3 на 3 в браузере: 9 бравлеров, 3 режима, умные боты. Устанавливается как приложение и работает офлайн." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="icons/icon-512.png" />
 </head>
 <body>
   <div id="app">
@@ -122,6 +133,8 @@
           <div class="profile-stat"><span class="ps-icon">🏆</span><span id="home-trophies">0</span><span class="ps-label">кубков</span></div>
           <div class="profile-stat"><span class="ps-icon">🎯</span><span id="home-winrate">0%</span><span class="ps-label">побед</span></div>
           <div class="profile-stat"><span class="ps-icon">🔥</span><span id="home-streak">0</span><span class="ps-label">серия</span></div>
+          <button class="icon-btn install-btn hidden" id="btn-install" title="Установить игру как приложение">⬇ <span>Установить</span></button>
+          <button class="icon-btn" id="btn-download" aria-label="Скачать игру" title="Скачать игру">💾</button>
           <button class="icon-btn" id="btn-sound" aria-label="Звук">🔊</button>
         </div>
       </header>
@@ -180,6 +193,7 @@
       <footer class="home-footer">
         <button class="nav-btn" id="btn-brawlers"><span>🦾</span>Бравлеры</button>
         <button class="nav-btn" id="btn-help"><span>📖</span>Как играть</button>
+        <button class="nav-btn" id="btn-download-2"><span>💾</span>Скачать игру</button>
         <div class="foot-tip">Совет дня: <span id="tip-text">Используйте кусты для засады — враг не увидит вас, пока не подойдёт вплотную.</span></div>
       </footer>
     </section>
@@ -279,6 +293,43 @@
               <li><b>Награда</b> — убивайте врагов и собирайте звёзды, до 20</li>
             </ul>
           </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ СКАЧАТЬ / УСТАНОВИТЬ ============ -->
+    <section id="screen-download" class="screen overlay hidden">
+      <div class="modal wide-modal">
+        <header class="modal-head">
+          <h2>Скачать игру</h2>
+          <button class="close-btn" data-close="download">✕</button>
+        </header>
+        <div class="download-grid">
+          <div class="dl-card">
+            <div class="dl-icon">📲</div>
+            <h3>Установить как приложение</h3>
+            <p>Игра появится на рабочем столе или в доке, запустится на весь экран и будет работать без интернета.</p>
+            <button class="btn primary" id="btn-install-2">Установить</button>
+            <div class="dl-note" id="install-hint"></div>
+          </div>
+          <div class="dl-card">
+            <div class="dl-icon">💾</div>
+            <h3>Один файл — вся игра</h3>
+            <p>Скачайте <b>BrawlArena.html</b> и открывайте двойным щелчком. Ничего устанавливать не нужно, интернет не требуется.</p>
+            <a class="btn primary" href="release/BrawlArena.html" download="BrawlArena.html">Скачать .html</a>
+            <div class="dl-note">Работает офлайн в любом современном браузере</div>
+          </div>
+          <div class="dl-card">
+            <div class="dl-icon">🗂️</div>
+            <h3>Исходники</h3>
+            <p>Полный код игры: движок, боты, рендерер. Запускается любым статическим сервером.</p>
+            <a class="btn ghost" href="https://github.com/Aleksandr-pro/Game/archive/refs/heads/main.zip" target="_blank" rel="noopener">Скачать .zip</a>
+            <div class="dl-note">Без сборки: <code>python3 -m http.server</code></div>
+          </div>
+        </div>
+        <div class="dl-tips">
+          <b>Как установить на телефоне:</b>
+          <span>Android / Chrome — меню «⋮» → «Установить приложение». iPhone / Safari — кнопка «Поделиться» → «На экран „Домой“».</span>
         </div>
       </div>
     </section>

@@ -21,6 +21,11 @@
     "shot": "node scripts/render-shot.js gemgrab blaze shots/arena.png",
     "test:abilities": "node scripts/abilities-test.js",
     "test:input": "node scripts/input-test.js",
-    "test": "node scripts/check.js && node scripts/abilities-test.js && node scripts/sim.js && node scripts/input-test.js && node scripts/ui-test.js && node scripts/bootstrap-test.js"
+    "test": "node scripts/check.js && node scripts/abilities-test.js && node scripts/sim.js && node scripts/input-test.js && node scripts/ui-test.js && node scripts/bootstrap-test.js && node scripts/offline-test.js",
+    "build": "node scripts/build-sw.js && node scripts/build-single.js",
+    "build:sw": "node scripts/build-sw.js",
+    "pack": "node scripts/build-single.js",
+    "icons": "node scripts/icons.js",
+    "test:offline": "node scripts/offline-test.js"
   }
 }

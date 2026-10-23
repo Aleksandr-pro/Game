@@ -1198,3 +1198,66 @@ body.touch .hud-bottom { padding-bottom: max(10px, env(safe-area-inset-bottom));
 @keyframes mvpIn { from { opacity: 0; transform: translateY(8px) scale(0.96); } to { opacity: 1; transform: none; } }
 .result-mvp b { color: #fff; }
 .bd-record { font-size: 11px; color: #9fb4d8; margin-top: 6px !important; }
+
+/* ============ Установка и скачивание ============ */
+.install-btn {
+  width: auto;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.4px;
+  color: #23160a;
+  background: linear-gradient(180deg, #ffe083, #ffb02e 60%, #ff8a00);
+  border: 1px solid rgba(255, 240, 190, 0.7);
+  box-shadow: 0 6px 18px rgba(255, 150, 20, 0.32);
+  animation: installGlow 2.4s ease-in-out infinite;
+}
+.install-btn span { display: inline; }
+@keyframes installGlow {
+  0%, 100% { box-shadow: 0 6px 18px rgba(255, 150, 20, 0.28); }
+  50% { box-shadow: 0 8px 26px rgba(255, 150, 20, 0.6); }
+}
+.install-btn:hover { transform: translateY(-2px) brightness(1.06); }
+
+.download-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  overflow-y: auto;
+}
+.dl-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 16px;
+  border-radius: 16px;
+  background: linear-gradient(165deg, rgba(40, 54, 84, 0.6), rgba(12, 18, 32, 0.8));
+  border: 1px solid rgba(150, 190, 255, 0.14);
+}
+.dl-card h3 { margin: 0; font-size: 15px; letter-spacing: 0.3px; }
+.dl-card p { margin: 0; font-size: 12.5px; line-height: 1.5; color: var(--muted); flex: 1; }
+.dl-card .btn { text-align: center; text-decoration: none; display: block; padding: 12px 16px; }
+.dl-icon { font-size: 26px; }
+.dl-note { font-size: 10.5px; color: #8ba3c9; text-align: center; line-height: 1.4; }
+.dl-note code { background: rgba(255, 255, 255, 0.08); padding: 1px 5px; border-radius: 5px; font-size: 10px; }
+.dl-tips {
+  margin-top: 4px;
+  padding: 12px 14px;
+  border-radius: 13px;
+  background: rgba(255, 204, 77, 0.07);
+  border: 1px solid rgba(255, 204, 77, 0.24);
+  font-size: 12px;
+  line-height: 1.5;
+  color: #d8e5ff;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.dl-tips b { color: var(--gold); font-size: 11.5px; letter-spacing: 0.4px; text-transform: uppercase; }
+@media (max-width: 560px) {
+  .install-btn { display: none !important; }
+  .dl-card { padding: 12px; }
+}
